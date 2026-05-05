@@ -12,6 +12,13 @@ class ChatOption(BaseModel):
     label: str
 
 
+class ChatMap(BaseModel):
+    latitude: float
+    longitude: float
+    label: str
+    address: str
+
+
 class ChatRequest(BaseModel):
     message: Optional[str] = Field(default=None, description="Texto digitado pelo usuario.")
     option_id: Optional[str] = Field(default=None, description="ID da opcao escolhida pelo usuario.")
@@ -23,6 +30,7 @@ class ChatResponse(BaseModel):
     messages: List[str]
     options: List[ChatOption]
     ended: bool = False
+    map: Optional[ChatMap] = None
 
 
 app = FastAPI(title="ESF Assistente API", version="0.1.0")
@@ -60,4 +68,5 @@ def serialize(result: FlowResult) -> ChatResponse:
         messages=result.messages,
         options=[ChatOption(id=option.id, label=option.label) for option in result.options],
         ended=result.ended,
+        map=ChatMap(**result.map.__dict__) if result.map else None,
     )

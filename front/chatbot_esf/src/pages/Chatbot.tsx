@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import * as L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 
 type Sender = 'bot' | 'user'
 
@@ -7,6 +12,7 @@ type ChatMessage = {
   id: string
   sender: Sender
   text: string
+  map?: ChatMap
 }
 
 type ChatOption = {
@@ -14,24 +20,46 @@ type ChatOption = {
   label: string
 }
 
+type ChatMap = {
+  latitude: number
+  longitude: number
+  label: string
+  address: string
+}
+
 type ChatResponse = {
   current_node: string
   messages: string[]
   options: ChatOption[]
   ended: boolean
+  map?: ChatMap | null
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const addressMarkerIcon = L.icon({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+})
 
 let messageSequence = 0
 
-function createMessage(sender: Sender, text: string): ChatMessage {
+function createMessage(sender: Sender, text: string, map?: ChatMap): ChatMessage {
   messageSequence += 1
   return {
     id: `${sender}-${messageSequence}`,
     sender,
     text,
+    map,
   }
+}
+
+function createBotMessages(texts: string[], map?: ChatMap | null): ChatMessage[] {
+  return texts.map((text, index) => createMessage('bot', text, index === 0 ? map ?? undefined : undefined))
 }
 
 function PrinterIcon() {
@@ -145,6 +173,47 @@ function getOptionIcon(optionId: string) {
   return <FileIcon />
 }
 
+function AddressMapView({ map }: { map: ChatMap }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!mapContainerRef.current) {
+      return undefined
+    }
+
+    const leafletMap = L.map(mapContainerRef.current, {
+      scrollWheelZoom: false,
+      zoomControl: false,
+    }).setView([map.latitude, map.longitude], 16)
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(leafletMap)
+
+    L.marker([map.latitude, map.longitude], { icon: addressMarkerIcon }).addTo(leafletMap).bindPopup(map.label)
+
+    window.setTimeout(() => {
+      leafletMap.invalidateSize()
+    }, 0)
+
+    return () => {
+      leafletMap.remove()
+    }
+  }, [map])
+
+  const mapUrl = `https://www.openstreetmap.org/?mlat=${map.latitude}&mlon=${map.longitude}#map=17/${map.latitude}/${map.longitude}`
+
+  return (
+    <div className="address-map-card">
+      <div className="address-map" ref={mapContainerRef} aria-label={`Mapa de ${map.label}`} />
+      <a className="address-map-link" href={mapUrl} target="_blank" rel="noreferrer">
+        Abrir mapa
+      </a>
+    </div>
+  )
+}
+
 function Chatbot() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [options, setOptions] = useState<ChatOption[]>([])
@@ -171,7 +240,7 @@ function Chatbot() {
           return
         }
 
-        setMessages(data.messages.map((text) => createMessage('bot', text)))
+        setMessages(createBotMessages(data.messages, data.map))
         setOptions(data.options)
         setCurrentNode(data.current_node)
         setEnded(data.ended)
@@ -230,7 +299,7 @@ function Chatbot() {
       const data = (await response.json()) as ChatResponse
       setMessages((currentMessages) => [
         ...currentMessages,
-        ...data.messages.map((text) => createMessage('bot', text)),
+        ...createBotMessages(data.messages, data.map),
       ])
       setOptions(data.options)
       setCurrentNode(data.current_node)
@@ -278,7 +347,7 @@ function Chatbot() {
           </div>
 
           <div className="header-text">
-            <h1>Central de Saude</h1>
+            <h1>ESF São Carlos</h1>
             <p>Assistente Virtual - UBS</p>
           </div>
 
@@ -297,7 +366,10 @@ function Chatbot() {
                 <div className="bot-avatar">
                   <BotIcon />
                 </div>
-                <div className="bot-message">{message.text}</div>
+                <div className={`bot-message ${message.map ? 'bot-message-with-map' : ''}`}>
+                  <div>{message.text}</div>
+                  {message.map && <AddressMapView map={message.map} />}
+                </div>
               </div>
             ) : (
               <div className="user-message-row" key={message.id}>

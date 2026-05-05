@@ -16,16 +16,35 @@ class FlowOption:
 
 
 @dataclass(frozen=True)
+class FlowMap:
+    latitude: float
+    longitude: float
+    label: str
+    address: str
+
+
+@dataclass(frozen=True)
 class FlowResult:
     current_node: str
     messages: List[str]
     options: List[FlowOption]
     ended: bool = False
+    map: Optional[FlowMap] = None
+
+
+UBS_ADDRESS_MAP = FlowMap(
+    latitude=-29.712747,
+    longitude=-53.8217719,
+    label="ESF Sao Carlos/Urlandia",
+    address="R. Agostinho Scolari, 546 - Urlândia, Santa Maria - RS, 97070-030",
+)
 
 
 ROOT_OPTIONS = [
-    FlowOption("informacoes", "Informacoes"),
+    FlowOption("informacoes", "Informações"),
     FlowOption("horario", "Horario de funcionamento"),
+    FlowOption("agendamento", "Agendamento"),
+
 ]
 
 INFO_OPTIONS = [
@@ -40,61 +59,61 @@ INFO_OPTIONS = [
 ]
 
 AFTER_INFO_OPTIONS = [
-    FlowOption("informacoes", "Ver outras informacoes"),
-    FlowOption("voltar_inicio", "Voltar ao inicio"),
+    FlowOption("informacoes", "Ver outras informações"),
+    FlowOption("voltar_inicio", "Voltar ao início"),
     FlowOption("encerrar", "Encerrar atendimento"),
 ]
 
 CONTENT_RESPONSES: Dict[str, str] = {
     "coleta": (
-        "A coleta laboratorial (LABVIDA) com agendamento previo acontece as tercas e "
-        "quintas-feiras, as 8h. Lembre-se do jejum quando indicado pelo medico e leve "
-        "seu pedido de exame e Cartao SUS."
+        "A coleta laboratorial (LABVIDA) com agendamento prévio acontece as terças e "
+        "quintas-feiras, às 8h. Lembre-se do jejum quando indicado pelo médico e leve "
+        "seu pedido de exame e Cartão SUS."
     ),
     "grupos": (
         "Temos 4 grupos abertos a comunidade:\n"
-        "- Amigos da Saude: segundas, 8h\n"
-        "- Vida Leve: tercas, 14h\n"
+        "- Amigos da Saúde: segundas, 8h\n"
+        "- Vida Leve: terças, 14h\n"
         "- Fisioterapia UFN: quartas, 8h\n"
-        "- Gestantes: mensal, confirme a data na recepcao"
+        "- Gestantes: mensal, confirme a data na recepção"
     ),
     "testes_rapidos": (
-        "Testes rapidos acontecem todos os dias, das 8h as 11h e das 13h as 16h. "
-        "Estao disponiveis HIV, sifilis, hepatites B e C e gravidez, conforme protocolo."
+        "Testes rápidos acontecem todos os dias, das 8h às 11h e das 13h às 16h. "
+        "Estão disponíveis HIV, sifilis, hepatites B e C e gravidez, conforme protocolo."
     ),
     "servicos": (
-        "Servicos disponiveis:\n"
-        "- Consultas medicas\n"
+        "Serviços disponiveis:\n"
+        "- Consultas médicas\n"
         "- Consultas de enfermagem\n"
-        "- Puericultura e pre-natal\n"
-        "- Coleta de citopatologico\n"
-        "- Vacinacao\n"
+        "- Puericultura e pré-natal\n"
+        "- Coleta de citopatológico\n"
+        "- Vacinacão\n"
         "- Coleta laboratorial\n"
         "- Odontologia\n"
         "- Curativos e procedimentos\n"
-        "- Testes rapidos\n"
+        "- Testes rápidos\n"
         "- Visitas domiciliares\n"
-        "- Grupos de educacao em saude\n"
-        "- Renovacao de receitas"
+        "- Grupos de educação em saúde\n"
+        "- Renovação de receitas"
     ),
     "equipe": (
-        "Nossa equipe tem 2 medicos(as), 2 enfermeiros(as), 2 tecnicos(as) de enfermagem, "
-        "8 agentes comunitarios de saude e 1 dentista, com media de 40 horas semanais."
+        "Nossa equipe tem 2 médicos(as), 2 enfermeiros(as), 2 técnicos(as) de enfermagem, "
+        "8 agentes comunitários de saúde e 1 dentista, com média de 40 horas semanais."
     ),
     "endereco": (
-        "A ESF fica na R. Agostinho Scolari, 546 - Urlandia, Santa Maria - RS, "
+        "A ESF fica na R. Agostinho Scolari, 546 - Urlândia, Santa Maria - RS, "
         "97070-030, Brasil."
     ),
     "horario": (
-        "Atendemos de segunda a sexta-feira, das 8h ao meio-dia e das 13h as 17h.\n"
-        "Quartas-feiras a tarde a unidade esta fechada para reuniao de equipe.\n"
-        "Nao ha atendimento aos fins de semana e feriados. Em emergencias, ligue 192 (SAMU).\n"
-        "Importante: sempre traga um documento de identificacao (RG, CPF e Cartao SUS) "
-        "para consultas, retirada de medicamentos e atualizacao de cadastro."
+        "Atendemos de segunda a sexta-feira, das 8h ao meio-dia e das 13h às 17h.\n"
+        "Quartas-feiras à tarde a unidade esta fechada para reunião de equipe.\n"
+        "Não há atendimento aos fins de semana e feriados. Em emergências, ligue 192 (SAMU).\n"
+        "Importante: sempre traga um documento de identificação (RG, CPF e Cartao SUS) "
+        "para consultas, retirada de medicamentos e atualização de cadastro."
     ),
     "medicamentos": (
-        "Renovacao de receitas deve ser agendada previamente na recepcao ou pelo telefone "
-        "(55) 3174-1588. Leve a ultima receita e o Cartao SUS."
+        "Renovação de receitas deve ser agendada previamente na recepção ou pelo telefone "
+        "(55) 3174-1588. Leve a última receita e o Cartao SUS."
     ),
 }
 
@@ -128,7 +147,7 @@ def start_response() -> FlowResult:
     return FlowResult(
         current_node=START_NODE,
         messages=[
-            "Ola! Sou o assistente da ESF Sao Carlos/Urlandia. Como posso ajudar? Escolha uma das opcoes abaixo."
+            "Olá! Sou o assistente da ESF São Carlos/Urlândia. Como posso ajudar? Escolha uma das opções abaixo."
         ],
         options=ROOT_OPTIONS,
     )
@@ -155,17 +174,25 @@ def handle_chat(message: Optional[str] = None, option_id: Optional[str] = None) 
             options=INFO_OPTIONS,
         )
 
-    if action == "agendamento_indisponivel":
+    if action in {"agendamento", "agendamento_indisponivel"}:
         return FlowResult(
             current_node=START_NODE,
             messages=[
-                "Por enquanto, o chatbot ainda nao realiza agendamentos.",
-                "Posso ajudar com informacoes da unidade enquanto isso.",
+                "Por enquanto, o chatbot ainda não realiza agendamentos.",
+                "Posso ajudar com informações da unidade enquanto isso.",
             ],
             options=ROOT_OPTIONS,
         )
 
     if action in CONTENT_RESPONSES:
+        if action == "endereco":
+            return FlowResult(
+                current_node=AFTER_INFO_NODE,
+                messages=[CONTENT_RESPONSES[action], "Deseja mais alguma coisa?"],
+                options=AFTER_INFO_OPTIONS,
+                map=UBS_ADDRESS_MAP,
+            )
+
         return FlowResult(
             current_node=AFTER_INFO_NODE,
             messages=[CONTENT_RESPONSES[action], "Deseja mais alguma coisa?"],
@@ -174,7 +201,7 @@ def handle_chat(message: Optional[str] = None, option_id: Optional[str] = None) 
 
     return FlowResult(
         current_node=START_NODE,
-        messages=["Nao encontrei essa opcao. Escolha uma das opcoes abaixo para continuar."],
+        messages=["Nao encontrei essa opção. Escolha uma das opções abaixo para continuar."],
         options=ROOT_OPTIONS,
     )
 
