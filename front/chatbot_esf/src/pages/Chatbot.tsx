@@ -35,7 +35,7 @@ type ChatResponse = {
   map?: ChatMap | null
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 const addressMarkerIcon = L.icon({
   iconUrl: markerIcon,
   iconRetinaUrl: markerIcon2x,
@@ -252,7 +252,7 @@ function Chatbot() {
         setMessages([
           createMessage(
             'bot',
-            'Nao consegui conectar com a API. Verifique se o FastAPI esta rodando em http://localhost:8000.',
+            `Nao consegui conectar com a API em ${API_BASE_URL}. Verifique se a URL esta correta e se o backend esta online.`,
           ),
         ])
         setOptions([])
