@@ -42,7 +42,7 @@ UBS_ADDRESS_MAP = FlowMap(
 
 ROOT_OPTIONS = [
     FlowOption("informacoes", "Informações"),
-    FlowOption("horario", "Horario de funcionamento"),
+    FlowOption("horario", "Horário de funcionamento"),
     FlowOption("agendamento", "Agendamento"),
 
 ]
@@ -79,7 +79,7 @@ CONTENT_RESPONSES: Dict[str, str] = {
     ),
     "testes_rapidos": (
         "Testes rápidos acontecem todos os dias, das 8h às 11h e das 13h às 16h. "
-        "Estão disponíveis HIV, sifilis, hepatites B e C e gravidez, conforme protocolo."
+        "Estão disponíveis HIV, sífilis, hepatites B e C e gravidez, conforme protocolo."
     ),
     "servicos": (
         "Serviços disponÍveis:\n"
