@@ -71,14 +71,6 @@ function HealthIcon() {
 }
 
 
-function BotIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2C10.9 2 10 2.9 10 4V5.1C6.6 5.6 4 8.5 4 12V18C4 19.1 4.9 20 6 20H18C19.1 20 20 19.1 20 18V12C20 8.5 17.4 5.6 14 5.1V4C14 2.9 13.1 2 12 2ZM8 13C8.6 13 9 12.6 9 12C9 11.4 8.6 11 8 11C7.4 11 7 11.4 7 12C7 12.6 7.4 13 8 13ZM16 13C16.6 13 17 12.6 17 12C17 11.4 16.6 11 16 11C15.4 11 15 11.4 15 12C15 12.6 15.4 13 16 13Z" />
-    </svg>
-  )
-}
-
 function FileIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -365,9 +357,6 @@ function Chatbot() {
           {messages.map((message) =>
             message.sender === 'bot' ? (
               <div className="message-row" key={message.id}>
-                <div className="bot-avatar">
-                  <HealthIcon/>
-                </div>
                 <div className={`bot-message ${message.map ? 'bot-message-with-map' : ''}`}>
                   <div>{message.text}</div>
                   {message.map && <AddressMapView map={message.map} />}
@@ -382,9 +371,6 @@ function Chatbot() {
 
           {isLoading && (
             <div className="message-row">
-              <div className="bot-avatar">
-                <BotIcon />
-              </div>
               <div className="bot-message typing-message">Digitando...</div>
             </div>
           )}
