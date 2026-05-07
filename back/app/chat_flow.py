@@ -50,12 +50,12 @@ ROOT_OPTIONS = [
 INFO_OPTIONS = [
     FlowOption("coleta", "Coleta laboratorial"),
     FlowOption("grupos", "Grupos da comunidade"),
-    FlowOption("testes_rapidos", "Curativos e testes rapidos"),
-    FlowOption("servicos", "Servicos"),
+    FlowOption("testes_rapidos", "Curativos e testes rápidos"),
+    FlowOption("servicos", "Serviços"),
     FlowOption("equipe", "Equipe"),
-    FlowOption("endereco", "Endereco"),
+    FlowOption("endereco", "Endereço"),
     FlowOption("medicamentos", "Medicamentos/Receitas"),
-    FlowOption("voltar_inicio", "Voltar ao inicio"),
+    FlowOption("voltar_inicio", "Voltar ao início"),
 ]
 
 AFTER_INFO_OPTIONS = [
@@ -82,7 +82,7 @@ CONTENT_RESPONSES: Dict[str, str] = {
         "Estão disponíveis HIV, sifilis, hepatites B e C e gravidez, conforme protocolo."
     ),
     "servicos": (
-        "Serviços disponiveis:\n"
+        "Serviços disponÍveis:\n"
         "- Consultas médicas\n"
         "- Consultas de enfermagem\n"
         "- Puericultura e pré-natal\n"
@@ -201,7 +201,7 @@ def handle_chat(message: Optional[str] = None, option_id: Optional[str] = None) 
 
     return FlowResult(
         current_node=START_NODE,
-        messages=["Nao encontrei essa opção. Escolha uma das opções abaixo para continuar."],
+        messages=["Não encontrei essa opção. Escolha uma das opções abaixo para continuar."],
         options=ROOT_OPTIONS,
     )
 

@@ -62,20 +62,14 @@ function createBotMessages(texts: string[], map?: ChatMap | null): ChatMessage[]
   return texts.map((text, index) => createMessage('bot', text, index === 0 ? map ?? undefined : undefined))
 }
 
-function PrinterIcon() {
+function HealthIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M7 7V3H17V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path
-        d="M7 17H5C3.9 17 3 16.1 3 15V10C3 8.9 3.9 8 5 8H19C20.1 8 21 8.9 21 10V15C21 16.1 20.1 17 19 17H17"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <path d="M7 14H17V21H7V14Z" stroke="currentColor" strokeWidth="2" />
-      <path d="M17 11H17.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <span className="material-symbols-outlined" aria-hidden="true">
+      home_health
+    </span>
   )
 }
+
 
 function BotIcon() {
   return (
@@ -145,6 +139,14 @@ function ChevronRightIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M9 6L15 12L9 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function SendIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3.8 12.5L20.5 4.2C21.1 3.9 21.7 4.5 21.4 5.1L13.2 21.2C12.9 21.8 12.1 21.7 11.9 21L9.8 14.3L3.9 13.8C3.2 13.7 3.1 12.8 3.8 12.5Z" fill="currentColor" />
     </svg>
   )
 }
@@ -343,7 +345,7 @@ function Chatbot() {
       <section className="chat-container" aria-label="Chatbot UBS">
         <header className="chat-header">
           <div className="header-icon">
-            <PrinterIcon />
+            <HealthIcon />
           </div>
 
           <div className="header-text">
@@ -364,7 +366,7 @@ function Chatbot() {
             message.sender === 'bot' ? (
               <div className="message-row" key={message.id}>
                 <div className="bot-avatar">
-                  <BotIcon />
+                  <HealthIcon/>
                 </div>
                 <div className={`bot-message ${message.map ? 'bot-message-with-map' : ''}`}>
                   <div>{message.text}</div>
@@ -412,7 +414,9 @@ function Chatbot() {
               disabled={isLoading || ended}
               onChange={(event) => setInputValue(event.target.value)}
             />
-            <button className="send-button" type="submit" aria-label="Enviar mensagem" disabled={isLoading || ended} />
+            <button className="send-button" type="submit" aria-label="Enviar mensagem" disabled={isLoading || ended}>
+              <SendIcon />
+            </button>
           </form>
 
           <p className="footer-text">Atendimento automatizado - Dados protegidos pela LGPD</p>
