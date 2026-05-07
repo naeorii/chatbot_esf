@@ -68,7 +68,7 @@ def start_chat() -> ChatResponse:
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
-    return serialize(handle_chat(message=request.message, option_id=request.option_id))
+    return serialize(handle_chat(message=request.message, option_id=request.option_id, current_node=request.current_node))
 
 
 def serialize(result: FlowResult) -> ChatResponse:

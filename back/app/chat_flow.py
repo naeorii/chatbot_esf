@@ -6,6 +6,8 @@ import unicodedata
 START_NODE = "inicio"
 INFO_NODE = "informacoes"
 AFTER_INFO_NODE = "mais_alguma_coisa"
+SCHEDULING_NODE = "agendamento"
+AFTER_SCHEDULING_NODE = "agendamento_incompleto"
 END_NODE = "encerrado"
 
 
@@ -44,7 +46,6 @@ ROOT_OPTIONS = [
     FlowOption("informacoes", "Informações"),
     FlowOption("horario", "Horário de funcionamento"),
     FlowOption("agendamento", "Agendamento"),
-
 ]
 
 INFO_OPTIONS = [
@@ -64,6 +65,27 @@ AFTER_INFO_OPTIONS = [
     FlowOption("encerrar", "Encerrar atendimento"),
 ]
 
+SCHEDULING_OPTIONS = [
+    FlowOption("agendar_consulta_medica", "Consulta médica"),
+    FlowOption("agendar_consulta_enfermagem", "Consulta de enfermagem"),
+    FlowOption("agendar_odontologia", "Odontologia"),
+    FlowOption("agendar_renovacao_receita", "Renovação de receita"),
+    FlowOption("voltar_inicio", "Voltar ao início"),
+]
+
+AFTER_SCHEDULING_OPTIONS = [
+    FlowOption("informacoes", "Ver informações da unidade"),
+    FlowOption("voltar_inicio", "Voltar ao início"),
+    FlowOption("encerrar", "Encerrar atendimento"),
+]
+
+SCHEDULING_SERVICE_LABELS = {
+    "agendar_consulta_medica": "consulta médica",
+    "agendar_consulta_enfermagem": "consulta de enfermagem",
+    "agendar_odontologia": "odontologia",
+    "agendar_renovacao_receita": "renovação de receita",
+}
+
 CONTENT_RESPONSES: Dict[str, str] = {
     "coleta": (
         "A coleta laboratorial (LABVIDA) com agendamento prévio acontece as terças e "
@@ -82,12 +104,12 @@ CONTENT_RESPONSES: Dict[str, str] = {
         "Estão disponíveis HIV, sífilis, hepatites B e C e gravidez, conforme protocolo."
     ),
     "servicos": (
-        "Serviços disponÍveis:\n"
+        "Serviços disponíveis:\n"
         "- Consultas médicas\n"
         "- Consultas de enfermagem\n"
         "- Puericultura e pré-natal\n"
         "- Coleta de citopatológico\n"
-        "- Vacinacão\n"
+        "- Vacinação\n"
         "- Coleta laboratorial\n"
         "- Odontologia\n"
         "- Curativos e procedimentos\n"
@@ -106,14 +128,14 @@ CONTENT_RESPONSES: Dict[str, str] = {
     ),
     "horario": (
         "Atendemos de segunda a sexta-feira, das 8h ao meio-dia e das 13h às 17h.\n"
-        "Quartas-feiras à tarde a unidade esta fechada para reunião de equipe.\n"
+        "Quartas-feiras à tarde a unidade está fechada para reunião de equipe.\n"
         "Não há atendimento aos fins de semana e feriados. Em emergências, ligue 192 (SAMU).\n"
-        "Importante: sempre traga um documento de identificação (RG, CPF e Cartao SUS) "
+        "Importante: sempre traga um documento de identificação (RG, CPF e Cartão SUS) "
         "para consultas, retirada de medicamentos e atualização de cadastro."
     ),
     "medicamentos": (
         "Renovação de receitas deve ser agendada previamente na recepção ou pelo telefone "
-        "(55) 3174-1588. Leve a última receita e o Cartao SUS."
+        "(55) 3174-1588. Leve a última receita e o Cartão SUS."
     ),
 }
 
@@ -153,7 +175,11 @@ def start_response() -> FlowResult:
     )
 
 
-def handle_chat(message: Optional[str] = None, option_id: Optional[str] = None) -> FlowResult:
+def handle_chat(
+    message: Optional[str] = None,
+    option_id: Optional[str] = None,
+    current_node: Optional[str] = None,
+) -> FlowResult:
     action = option_id or detect_intent(message or "")
 
     if action == "voltar_inicio":
@@ -176,12 +202,24 @@ def handle_chat(message: Optional[str] = None, option_id: Optional[str] = None) 
 
     if action in {"agendamento", "agendamento_indisponivel"}:
         return FlowResult(
-            current_node=START_NODE,
+            current_node=SCHEDULING_NODE,
             messages=[
-                "Por enquanto, o chatbot ainda não realiza agendamentos.",
-                "Posso ajudar com informações da unidade enquanto isso.",
+                "Vamos iniciar o agendamento. Esta parte do fluxo ainda está incompleta, mas já posso registrar a intenção de atendimento.",
+                "Qual tipo de agendamento você deseja?",
             ],
-            options=ROOT_OPTIONS,
+            options=SCHEDULING_OPTIONS,
+        )
+
+    if action in SCHEDULING_SERVICE_LABELS:
+        return FlowResult(
+            current_node=AFTER_SCHEDULING_NODE,
+            messages=[
+                f"Você selecionou {SCHEDULING_SERVICE_LABELS[action]}.",
+                "Por enquanto, o fluxo de agendamento vai somente até esta seleção.",
+                "Para concluir o agendamento, entre em contato com a recepção pelo telefone (55) 3174-1588 ou presencialmente na unidade.",
+                "Posso ajudar com mais alguma coisa?",
+            ],
+            options=AFTER_SCHEDULING_OPTIONS,
         )
 
     if action in CONTENT_RESPONSES:
