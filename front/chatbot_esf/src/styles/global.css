@@ -64,10 +64,10 @@ button {
 }
 
 .header-icon {
-  width: 42px;
-  height: 42px;
+  width: 41px;
+  height: 41px;
   border-radius: 50%;
-  background: #25d366;
+  background: #27be5f;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -93,39 +93,63 @@ button {
   line-height: 1.1;
 }
 
-.header-text p {
+.presence {
   font-size: 11px;
   color: #d9fff0;
   font-weight: 600;
   margin-top: 2px;
-}
-
-.status {
-  background: #e7fff0;
-  color: #075e54;
-  font-size: 10px;
-  padding: 4px 9px;
-  border-radius: 14px;
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-shrink: 0;
 }
 
-.status-dot {
+.presence-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #25d366;
+  flex-shrink: 0;
 }
 
-.status-ended {
-  background: #f1f5f3;
-  color: #4b635c;
+.presence-ended {
+  color: #b8d8ce;
 }
 
-.status-ended .status-dot {
+.presence-ended .presence-dot {
   background: #8bb7a5;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.header-action-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  color: #d9fff0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.header-action-button:hover,
+.header-action-button:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  outline: none;
+}
+
+.header-action-button svg {
+  width: 19px;
+  height: 19px;
 }
 
 .chat-body {

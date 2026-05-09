@@ -153,6 +153,31 @@ function SendIcon() {
   )
 }
 
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M7.1 4.8L9.2 4.2C9.9 4 10.6 4.4 10.8 5.1L11.5 7.5C11.7 8.1 11.4 8.8 10.8 9.1L9.6 9.8C10.5 11.6 11.9 13 13.7 13.9L14.4 12.7C14.7 12.1 15.4 11.8 16 12L18.4 12.7C19.1 12.9 19.5 13.6 19.3 14.3L18.7 16.4C18.5 17.1 17.9 17.5 17.2 17.5C10.9 17.5 6 12.6 6 6.3C6 5.6 6.4 5 7.1 4.8Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function VideoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4.5 7.5C4.5 6.7 5.2 6 6 6H14C14.8 6 15.5 6.7 15.5 7.5V16.5C15.5 17.3 14.8 18 14 18H6C5.2 18 4.5 17.3 4.5 16.5V7.5Z" stroke="currentColor" strokeWidth="2" />
+      <path d="M15.5 10.2L19.2 8.3C19.8 8 20.5 8.4 20.5 9.1V14.9C20.5 15.6 19.8 16 19.2 15.7L15.5 13.8V10.2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function MenuDotsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 6.5H12.01M12 12H12.01M12 17.5H12.01" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function getOptionIcon(optionId: string) {
   if (optionId === 'agendamento' || optionId.startsWith('agendar_')) {
     return <CalendarIcon />
@@ -356,12 +381,22 @@ function Chatbot() {
 
           <div className="header-text">
             <h1>ESF São Carlos</h1>
-            <p>Assistente Virtual - UBS</p>
+            <p className={`presence ${ended ? 'presence-ended' : ''}`}>
+              <span className="presence-dot" />
+              {ended ? 'encerrado' : 'online'}
+            </p>
           </div>
 
-          <div className={`status ${ended ? 'status-ended' : ''}`}>
-            <span className="status-dot" />
-            {ended ? 'Encerrado' : 'Ativo'}
+          <div className="header-actions" aria-label="Ações do chat">
+            <button className="header-action-button" type="button" aria-label="Ligar">
+              <PhoneIcon />
+            </button>
+            <button className="header-action-button" type="button" aria-label="Chamada de vídeo">
+              <VideoIcon />
+            </button>
+            <button className="header-action-button" type="button" aria-label="Mais opções">
+              <MenuDotsIcon />
+            </button>
           </div>
         </header>
 
