@@ -76,7 +76,6 @@ SCHEDULING_OPTIONS = [
     FlowOption("agendar_dentista", "Dentista"),
     FlowOption("agendar_enfermagem", "Enfermagem"),
     FlowOption("agendar_medico", "Médico"),
-    FlowOption("coleta", "Coleta"),
     FlowOption("voltar_inicio", "Voltar ao início"),
 ]
 
