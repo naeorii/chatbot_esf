@@ -65,7 +65,7 @@ function createBotMessages(texts: string[], map?: ChatMap | null): ChatMessage[]
 function HealthIcon() {
   return (
     <span className="material-symbols-outlined" aria-hidden="true">
-      home_health
+      health_metrics
     </span>
   )
 }
