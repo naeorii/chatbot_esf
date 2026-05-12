@@ -81,7 +81,6 @@ SCHEDULING_OPTIONS = [
 ]
 
 AFTER_SCHEDULING_OPTIONS = [
-    FlowOption("agendamento", "Realizar agendamento"),
     FlowOption("informacoes", "Ver informações da unidade"),
     FlowOption("voltar_inicio", "Voltar ao início"),
     FlowOption("encerrar", "Encerrar atendimento"),
@@ -140,7 +139,7 @@ SCHEDULING_SERVICE_INTENTS = {
 
 CONTENT_RESPONSES: Dict[str, str] = {
     "coleta": (
-        "A coleta laboratorial (LABVIDA) com agendamento prévio acontece as terças e "
+        "A coleta laboratorial (LABVIDA) sem agendamento prévio acontece as terças e "
         "quintas-feiras, às 8h. Lembre-se do jejum quando indicado pelo médico e leve "
         "seu pedido de exame e Cartão SUS."
     ),

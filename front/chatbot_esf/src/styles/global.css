@@ -379,7 +379,7 @@ button {
 }
 
 .send-button:hover {
-  background: #1fbd5c;
+  background: #16ae9c;
   box-shadow: 0 4px 10px rgba(37, 211, 102, 0.34);
   transform: translateY(-1px);
 }
