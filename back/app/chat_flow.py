@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 import unicodedata
+import re
 
 
 START_NODE = "inicio"
@@ -214,6 +215,16 @@ SCHEDULING_KEYWORDS = [
     "dentista",
 ]
 
+GREETING_PATTERNS = [
+    r"\boi+\b",
+    r"\bola+\b",
+    r"\bolá+\b",
+    r"\be ai+\b",
+    r"\bbom dia+\b",
+    r"\bboa tarde+\b",
+    r"\bboa noite+\b",
+]
+
 
 def start_response() -> FlowResult:
     return FlowResult(
@@ -235,6 +246,9 @@ def handle_chat(
 
     if current_node and current_node.startswith(SCHEDULING_DOCUMENT_NODE):
         return handle_scheduling_document(current_node, message, option_id)
+
+    if message and is_greeting(message):
+        return start_response()
 
     action = option_id or detect_intent(message or "")
 
@@ -411,6 +425,9 @@ def detect_intent(message: str) -> str:
     if not normalized:
         return "voltar_inicio"
 
+    if is_greeting(message):
+        return "voltar_inicio"
+
     for keyword, action in SCHEDULING_SERVICE_INTENTS.items():
         if keyword in normalized:
             return action
@@ -431,6 +448,32 @@ def normalize(text: str) -> str:
     return without_accents.casefold().strip()
 
 
+def is_greeting(message: str) -> bool:
+    normalized = normalize(message)
+    return any(re.search(pattern, normalized) for pattern in GREETING_PATTERNS)
+
+
+def is_valid_patient_name(message: str) -> bool:
+    normalized = normalize(message)
+    tokens = re.findall(r"[a-z]+", normalized)
+    name_tokens = [token for token in tokens if token not in {"da", "de", "di", "do", "das", "dos", "e"}]
+    blocked_terms = set(SCHEDULING_KEYWORDS)
+    blocked_terms.update(SCHEDULING_SERVICE_INTENTS)
+    blocked_terms.update(keyword for keywords in INTENT_KEYWORDS.values() for keyword in keywords)
+
+    if is_greeting(message) or len(name_tokens) < 2:
+        return False
+
+    return not any(term in normalized for term in blocked_terms)
+
+
+def looks_like_patient_name(message: str) -> bool:
+    normalized = normalize(message)
+    tokens = re.findall(r"[a-z]+", normalized)
+    name_tokens = [token for token in tokens if token not in {"da", "de", "di", "do", "das", "dos", "e"}]
+    return len(name_tokens) >= 1 and not re.search(r"\d", normalized)
+
+
 def handle_scheduling_name(
     current_node: str,
     message: Optional[str],
@@ -443,6 +486,13 @@ def handle_scheduling_name(
         return FlowResult(
             current_node=current_node,
             messages=["Digite o nome completo do paciente para continuar."],
+            options=[],
+        )
+
+    if not is_valid_patient_name(message or ""):
+        return FlowResult(
+            current_node=current_node,
+            messages=["Nao identifiquei um nome completo de paciente. Digite novamente o nome completo para continuar."],
             options=[],
         )
 
@@ -466,6 +516,13 @@ def handle_scheduling_document(
         return FlowResult(
             current_node=current_node,
             messages=["Digite o CPF, RG ou Cartão SUS para consultar o cadastro no SIGSS."],
+            options=[],
+        )
+
+    if looks_like_patient_name(message or ""):
+        return FlowResult(
+            current_node=current_node,
+            messages=["Nao identifiquei CPF, RG ou Cartao SUS. Digite novamente um documento do paciente para continuar."],
             options=[],
         )
 

@@ -361,7 +361,7 @@ function Chatbot() {
     event.preventDefault()
 
     const trimmedMessage = inputValue.trim()
-    if (!trimmedMessage || isLoading || ended) {
+    if (!trimmedMessage || isLoading) {
       return
     }
 
@@ -446,10 +446,10 @@ function Chatbot() {
               placeholder={ended ? 'Atendimento encerrado' : 'Escreva sua mensagem...'}
               aria-label="Mensagem"
               value={inputValue}
-              disabled={isLoading || ended}
+              disabled={isLoading}
               onChange={(event) => setInputValue(event.target.value)}
             />
-            <button className="send-button" type="submit" aria-label="Enviar mensagem" disabled={isLoading || ended}>
+            <button className="send-button" type="submit" aria-label="Enviar mensagem" disabled={isLoading}>
               <SendIcon />
             </button>
           </form>
