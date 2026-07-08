@@ -1,7 +1,8 @@
+import random
+import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Dict, List, Optional
-import unicodedata
-import re
 
 
 START_NODE = "inicio"
@@ -10,11 +11,8 @@ AFTER_INFO_NODE = "mais_alguma_coisa"
 SCHEDULING_NODE = "agendamento"
 SCHEDULING_NAME_NODE = "agendamento_nome"
 SCHEDULING_DOCUMENT_NODE = "agendamento_documento"
-SCHEDULING_SIGSS_PATIENT_NODE = "agendamento_verificacao_sigss"
-SCHEDULING_SIGSS_SCHEDULE_NODE = "agendamento_agenda_sigss"
 SCHEDULING_SLOT_NODE = "agendamento_horario"
 SCHEDULING_CONFIRM_NODE = "agendamento_confirmacao"
-SCHEDULING_SAVE_NODE = "agendamento_gravacao_sigss"
 AFTER_SCHEDULING_NODE = "agendamento_finalizado"
 END_NODE = "encerrado"
 
@@ -92,38 +90,34 @@ SCHEDULING_SERVICE_LABELS = {
     "agendar_medico": "médico",
 }
 
-SIGSS_PATIENT_RESULT_OPTIONS = [
-    FlowOption("sigss_paciente_vinculado", "Cadastro ativo na ESF"),
-    FlowOption("sigss_paciente_nao_vinculado", "Não cadastrado na ESF"),
-]
-
-SIGSS_SCHEDULE_RESULT_OPTIONS = [
-    FlowOption("sigss_horarios_disponiveis", "Há horários disponíveis"),
-    FlowOption("sigss_sem_horarios", "Sem horários disponíveis"),
-    FlowOption("sigss_erro_consulta", "Erro ao consultar SIGSS"),
-]
-
 SCHEDULING_SLOT_OPTIONS = [
-    FlowOption("agendamento_horario_1", "Segunda-feira, 8h"),
-    FlowOption("agendamento_horario_2", "Terça-feira, 14h"),
-    FlowOption("agendamento_horario_3", "Quinta-feira, 10h"),
+    FlowOption("agendamento_horario_seg_08", "Segunda-feira, 8h"),
+    FlowOption("agendamento_horario_seg_1030", "Segunda-feira, 10h30"),
+    FlowOption("agendamento_horario_ter_09", "Terça-feira, 9h"),
+    FlowOption("agendamento_horario_ter_14", "Terça-feira, 14h"),
+    FlowOption("agendamento_horario_qua_08", "Quarta-feira, 8h"),
+    FlowOption("agendamento_horario_qui_10", "Quinta-feira, 10h"),
+    FlowOption("agendamento_horario_qui_1530", "Quinta-feira, 15h30"),
+    FlowOption("agendamento_horario_sex_0830", "Sexta-feira, 8h30"),
+    FlowOption("agendamento_horario_sex_1330", "Sexta-feira, 13h30"),
 ]
 
 SCHEDULING_SLOT_LABELS = {
-    "agendamento_horario_1": "segunda-feira, 8h",
-    "agendamento_horario_2": "terça-feira, 14h",
-    "agendamento_horario_3": "quinta-feira, 10h",
+    "agendamento_horario_seg_08": "segunda-feira, 8h",
+    "agendamento_horario_seg_1030": "segunda-feira, 10h30",
+    "agendamento_horario_ter_09": "terça-feira, 9h",
+    "agendamento_horario_ter_14": "terça-feira, 14h",
+    "agendamento_horario_qua_08": "quarta-feira, 8h",
+    "agendamento_horario_qui_10": "quinta-feira, 10h",
+    "agendamento_horario_qui_1530": "quinta-feira, 15h30",
+    "agendamento_horario_sex_0830": "sexta-feira, 8h30",
+    "agendamento_horario_sex_1330": "sexta-feira, 13h30",
 }
 
 SCHEDULING_CONFIRM_OPTIONS = [
     FlowOption("agendamento_confirmar", "Confirmar agendamento"),
     FlowOption("agendamento_trocar_horario", "Escolher outro horário"),
     FlowOption("agendamento_cancelar", "Cancelar"),
-]
-
-SIGSS_SAVE_RESULT_OPTIONS = [
-    FlowOption("sigss_gravacao_sucesso", "Gravou com sucesso"),
-    FlowOption("sigss_erro_gravacao", "Erro ao gravar no SIGSS"),
 ]
 
 SCHEDULING_SERVICE_INTENTS = {
@@ -236,6 +230,20 @@ def start_response() -> FlowResult:
     )
 
 
+def random_scheduling_slot_options() -> List[FlowOption]:
+    return random.sample(SCHEDULING_SLOT_OPTIONS, k=3)
+
+
+def scheduling_confirmation_message(current_node: Optional[str]) -> str:
+    selected_slot = state_payload(current_node or "")
+    selected_slot_label = SCHEDULING_SLOT_LABELS.get(selected_slot)
+
+    if selected_slot_label:
+        return f"Agendamento confirmado para {selected_slot_label}."
+
+    return "Agendamento confirmado."
+
+
 def handle_chat(
     message: Optional[str] = None,
     option_id: Optional[str] = None,
@@ -289,59 +297,6 @@ def handle_chat(
             options=[],
         )
 
-    if action == "sigss_paciente_nao_vinculado":
-        return FlowResult(
-            current_node=AFTER_SCHEDULING_NODE,
-            messages=[
-                "Desculpe, mas a consulta não pode ser agendada pois o paciente não está cadastrado ou vinculado a esta unidade.",
-                "Realize o cadastro na recepção da ESF antes de realizar o agendamento remoto.",
-                "Deseja mais alguma coisa?",
-            ],
-            options=AFTER_SCHEDULING_OPTIONS,
-        )
-
-    if action == "sigss_paciente_vinculado":
-        return FlowResult(
-            current_node=SCHEDULING_SIGSS_SCHEDULE_NODE,
-            messages=[
-                "Backend verifica no SIGSS a agenda do profissional conforme o tipo escolhido.",
-                "No protótipo, selecione o retorno dessa consulta.",
-            ],
-            options=SIGSS_SCHEDULE_RESULT_OPTIONS,
-        )
-
-    if action == "sigss_sem_horarios":
-        return FlowResult(
-            current_node=AFTER_SCHEDULING_NODE,
-            messages=[
-                "Não há horários disponíveis no SIGSS para esse tipo de atendimento no momento.",
-                "Posso tentar outro tipo de agendamento ou voltar ao início.",
-                "Deseja mais alguma coisa?",
-            ],
-            options=AFTER_SCHEDULING_OPTIONS,
-        )
-
-    if action == "sigss_erro_consulta":
-        return FlowResult(
-            current_node=AFTER_SCHEDULING_NODE,
-            messages=[
-                "Não consegui consultar o SIGSS agora.",
-                "Não vou prometer uma vaga sem confirmação do sistema. Oriente o paciente a entrar em contato com a recepção ou tentar novamente mais tarde.",
-                "Posso ajudar com mais alguma coisa?",
-            ],
-            options=AFTER_SCHEDULING_OPTIONS,
-        )
-
-    if action == "sigss_horarios_disponiveis":
-        return FlowResult(
-            current_node=SCHEDULING_SLOT_NODE,
-            messages=[
-                "Bot mostra os horários disponíveis encontrados no SIGSS.",
-                "Escolha uma opção para continuar.",
-            ],
-            options=SCHEDULING_SLOT_OPTIONS,
-        )
-
     if action in SCHEDULING_SLOT_LABELS:
         return FlowResult(
             current_node=state_with_payload(SCHEDULING_CONFIRM_NODE, action),
@@ -356,7 +311,7 @@ def handle_chat(
         return FlowResult(
             current_node=SCHEDULING_SLOT_NODE,
             messages=["Escolha outro horário disponível."],
-            options=SCHEDULING_SLOT_OPTIONS,
+            options=random_scheduling_slot_options(),
         )
 
     if action == "agendamento_cancelar":
@@ -368,34 +323,9 @@ def handle_chat(
 
     if action == "agendamento_confirmar":
         return FlowResult(
-            current_node=SCHEDULING_SAVE_NODE,
-            messages=[
-                "Backend grava o agendamento no SIGSS e aguarda protocolo/status.",
-                "No protótipo, selecione o retorno da gravação.",
-            ],
-            options=SIGSS_SAVE_RESULT_OPTIONS,
-        )
-
-    if action == "sigss_gravacao_sucesso":
-        return FlowResult(
             current_node=AFTER_SCHEDULING_NODE,
-            messages=[
-                "Agendamento confirmado no SIGSS.",
-                "Leve RG, CPF e Cartão SUS no dia do atendimento. Protocolo: SIGSS-AGD-0001.",
-                "Deseja mais alguma coisa?",
-            ],
-            options=AFTER_SCHEDULING_OPTIONS,
-        )
-
-    if action == "sigss_erro_gravacao":
-        return FlowResult(
-            current_node=AFTER_SCHEDULING_NODE,
-            messages=[
-                "O SIGSS não confirmou a gravação do agendamento.",
-                "Não vou confirmar a vaga sem retorno do sistema. Oriente o paciente a entrar em contato com a unidade ou tentar novamente.",
-                "Deseja mais alguma coisa?",
-            ],
-            options=AFTER_SCHEDULING_OPTIONS,
+            messages=[scheduling_confirmation_message(current_node)],
+            options=[],
         )
 
     if action in CONTENT_RESPONSES:
@@ -527,12 +457,14 @@ def handle_scheduling_document(
         )
 
     return FlowResult(
-        current_node=SCHEDULING_SIGSS_PATIENT_NODE,
+        current_node=SCHEDULING_SLOT_NODE,
         messages=[
             "Backend consulta paciente no SIGSS pelo CPF, RG ou Cartão SUS informado.",
-            "No protótipo, selecione o resultado da verificação de cadastro.",
+            "Cadastro ativo na ESF.",
+            "Verificado no SIGSS a agenda do profissional conforme o tipo escolhido.",
+            "Há horários disponíveis. Escolha uma opção para continuar.",
         ],
-        options=SIGSS_PATIENT_RESULT_OPTIONS,
+        options=random_scheduling_slot_options(),
     )
 
 
