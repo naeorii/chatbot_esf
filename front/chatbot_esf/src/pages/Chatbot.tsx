@@ -36,6 +36,7 @@ type ChatResponse = {
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+const URL_PATTERN = /(https?:\/\/[^\s]+)/g
 const addressMarkerIcon = L.icon({
   iconUrl: markerIcon,
   iconRetinaUrl: markerIcon2x,
@@ -60,6 +61,24 @@ function createMessage(sender: Sender, text: string, map?: ChatMap): ChatMessage
 
 function createBotMessages(texts: string[], map?: ChatMap | null): ChatMessage[] {
   return texts.map((text, index) => createMessage('bot', text, index === 0 ? map ?? undefined : undefined))
+}
+
+function renderMessageText(text: string) {
+  return text.split(URL_PATTERN).map((part, index) => {
+    if (!part) {
+      return null
+    }
+
+    if (part.startsWith('http://') || part.startsWith('https://')) {
+      return (
+        <a className="message-link" href={part} target="_blank" rel="noreferrer" key={`${part}-${index}`}>
+          {part}
+        </a>
+      )
+    }
+
+    return part
+  })
 }
 
 function HealthIcon() {
@@ -407,7 +426,7 @@ function Chatbot() {
             message.sender === 'bot' ? (
               <div className="message-row" key={message.id}>
                 <div className={`bot-message ${message.map ? 'bot-message-with-map' : ''}`}>
-                  <div>{message.text}</div>
+                  <div>{renderMessageText(message.text)}</div>
                   {message.map && <AddressMapView map={message.map} />}
                 </div>
               </div>

@@ -195,6 +195,13 @@ button {
   max-width: calc(100vw - 70px);
 }
 
+.message-link {
+  color: #075e54;
+  font-weight: 700;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
 .address-map-card {
   margin-top: 10px;
   overflow: hidden;

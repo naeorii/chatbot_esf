@@ -15,6 +15,14 @@ SCHEDULING_SLOT_NODE = "agendamento_horario"
 SCHEDULING_CONFIRM_NODE = "agendamento_confirmacao"
 AFTER_SCHEDULING_NODE = "agendamento_finalizado"
 END_NODE = "encerrado"
+UNIT_SITE_URL = "https://urlandiaesf.lovable.app/"
+UNIT_FACEBOOK_URL = (
+    "https://www.facebook.com/people/Esf-Url%C3%A2ndia/61579852984607/?locale=pt_BR"
+)
+INFO_SUGGESTION_MESSAGE = (
+    "Para acessar mais informações, visite o site da unidade: "
+    f"{UNIT_SITE_URL} ou acompanhe o Facebook: {UNIT_FACEBOOK_URL}"
+)
 
 
 @dataclass(frozen=True)
@@ -185,6 +193,14 @@ CONTENT_RESPONSES: Dict[str, str] = {
 }
 
 
+def content_response_messages(action: str) -> List[str]:
+    return [
+        CONTENT_RESPONSES[action],
+        INFO_SUGGESTION_MESSAGE,
+        "Deseja mais alguma coisa?",
+    ]
+
+
 INTENT_KEYWORDS = {
     "informacoes": ["informacao", "informacoes", "opcoes", "assunto", "saber"],
     "horario": ["horario", "hora", "funcionamento", "aberto", "abre", "fecha", "fechado"],
@@ -332,14 +348,14 @@ def handle_chat(
         if action == "endereco":
             return FlowResult(
                 current_node=AFTER_INFO_NODE,
-                messages=[CONTENT_RESPONSES[action], "Deseja mais alguma coisa?"],
+                messages=content_response_messages(action),
                 options=AFTER_INFO_OPTIONS,
                 map=UBS_ADDRESS_MAP,
             )
 
         return FlowResult(
             current_node=AFTER_INFO_NODE,
-            messages=[CONTENT_RESPONSES[action], "Deseja mais alguma coisa?"],
+            messages=content_response_messages(action),
             options=AFTER_INFO_OPTIONS,
         )
 
