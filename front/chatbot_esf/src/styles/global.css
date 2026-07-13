@@ -230,6 +230,36 @@ button {
   background: #d9fdd3;
 }
 
+.chat-image-card {
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid #cdeedb;
+  border-radius: 10px;
+  background: #eef9f2;
+}
+
+.chat-image-card a {
+  display: block;
+}
+
+.chat-image-card img {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.chat-image-caption {
+  display: block;
+  padding: 8px 10px;
+  color: #075e54;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  background: #e7fff0;
+}
+
 .typing-message {
   color: #128c7e;
   font-weight: 600;

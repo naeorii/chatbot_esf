@@ -13,6 +13,7 @@ type ChatMessage = {
   sender: Sender
   text: string
   map?: ChatMap
+  image?: ChatImage
 }
 
 type ChatOption = {
@@ -27,12 +28,19 @@ type ChatMap = {
   address: string
 }
 
+type ChatImage = {
+  url: string
+  alt: string
+  caption?: string | null
+}
+
 type ChatResponse = {
   current_node: string
   messages: string[]
   options: ChatOption[]
   ended: boolean
   map?: ChatMap | null
+  image?: ChatImage | null
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
@@ -49,18 +57,26 @@ const addressMarkerIcon = L.icon({
 
 let messageSequence = 0
 
-function createMessage(sender: Sender, text: string, map?: ChatMap): ChatMessage {
+function createMessage(sender: Sender, text: string, map?: ChatMap, image?: ChatImage): ChatMessage {
   messageSequence += 1
   return {
     id: `${sender}-${messageSequence}`,
     sender,
     text,
     map,
+    image,
   }
 }
 
-function createBotMessages(texts: string[], map?: ChatMap | null): ChatMessage[] {
-  return texts.map((text, index) => createMessage('bot', text, index === 0 ? map ?? undefined : undefined))
+function createBotMessages(texts: string[], map?: ChatMap | null, image?: ChatImage | null): ChatMessage[] {
+  return texts.map((text, index) =>
+    createMessage(
+      'bot',
+      text,
+      index === 0 ? map ?? undefined : undefined,
+      index === 0 ? image ?? undefined : undefined,
+    ),
+  )
 }
 
 function renderMessageText(text: string) {
@@ -210,7 +226,7 @@ function getOptionIcon(optionId: string) {
     return <UsersIcon />
   }
 
-  if (optionId === 'endereco') {
+  if (optionId === 'endereco' || optionId === 'areas_atendidas') {
     return <LocationIcon />
   }
 
@@ -223,6 +239,27 @@ function getOptionIcon(optionId: string) {
   }
 
   return <FileIcon />
+}
+
+function resolveImageUrl(url: string) {
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url
+  }
+
+  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+function ChatImageView({ image }: { image: ChatImage }) {
+  const imageUrl = resolveImageUrl(image.url)
+
+  return (
+    <div className="chat-image-card">
+      <a href={imageUrl} target="_blank" rel="noreferrer">
+        <img src={imageUrl} alt={image.alt} />
+      </a>
+      {image.caption && <span className="chat-image-caption">{image.caption}</span>}
+    </div>
+  )
 }
 
 function AddressMapView({ map }: { map: ChatMap }) {
@@ -292,7 +329,7 @@ function Chatbot() {
           return
         }
 
-        setMessages(createBotMessages(data.messages, data.map))
+        setMessages(createBotMessages(data.messages, data.map, data.image))
         setOptions(data.options)
         setCurrentNode(data.current_node)
         setEnded(data.ended)
@@ -351,7 +388,7 @@ function Chatbot() {
       const data = (await response.json()) as ChatResponse
       setMessages((currentMessages) => [
         ...currentMessages,
-        ...createBotMessages(data.messages, data.map),
+        ...createBotMessages(data.messages, data.map, data.image),
       ])
       setOptions(data.options)
       setCurrentNode(data.current_node)
@@ -367,10 +404,11 @@ function Chatbot() {
   }
 
   function handleOptionClick(option: ChatOption) {
-    if (isLoading || ended) {
+    if (isLoading) {
       return
     }
 
+    setEnded(false)
     setMessages((currentMessages) => [...currentMessages, createMessage('user', option.label)])
     setOptions([])
     void requestChat({ option_id: option.id })
@@ -385,6 +423,7 @@ function Chatbot() {
     }
 
     setInputValue('')
+    setEnded(false)
     setMessages((currentMessages) => [...currentMessages, createMessage('user', trimmedMessage)])
     setOptions([])
     void requestChat({ message: trimmedMessage })
@@ -425,9 +464,10 @@ function Chatbot() {
           {messages.map((message) =>
             message.sender === 'bot' ? (
               <div className="message-row" key={message.id}>
-                <div className={`bot-message ${message.map ? 'bot-message-with-map' : ''}`}>
+                <div className={`bot-message ${message.map || message.image ? 'bot-message-with-map' : ''}`}>
                   <div>{renderMessageText(message.text)}</div>
                   {message.map && <AddressMapView map={message.map} />}
+                  {message.image && <ChatImageView image={message.image} />}
                 </div>
               </div>
             ) : (
@@ -443,7 +483,7 @@ function Chatbot() {
             </div>
           )}
 
-          {options.length > 0 && !isLoading && !ended && (
+          {options.length > 0 && !isLoading && (
             <div className="options" aria-label="Opcoes de atendimento">
               {options.map((option) => (
                 <button className="option-button" type="button" key={option.id} onClick={() => handleOptionClick(option)}>
@@ -462,7 +502,7 @@ function Chatbot() {
           <form className="input-box" onSubmit={handleSubmit}>
             <input
               type="text"
-              placeholder={ended ? 'Atendimento encerrado' : 'Escreva sua mensagem...'}
+              placeholder={ended ? 'Escreva para iniciar novo atendimento...' : 'Escreva sua mensagem...'}
               aria-label="Mensagem"
               value={inputValue}
               disabled={isLoading}

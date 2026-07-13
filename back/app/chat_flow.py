@@ -40,12 +40,20 @@ class FlowMap:
 
 
 @dataclass(frozen=True)
+class FlowImage:
+    url: str
+    alt: str
+    caption: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class FlowResult:
     current_node: str
     messages: List[str]
     options: List[FlowOption]
     ended: bool = False
     map: Optional[FlowMap] = None
+    image: Optional[FlowImage] = None
 
 
 UBS_ADDRESS_MAP = FlowMap(
@@ -53,6 +61,12 @@ UBS_ADDRESS_MAP = FlowMap(
     longitude=-53.8217719,
     label="ESF Sao Carlos/Urlandia",
     address="R. Agostinho Scolari, 546 - Urlândia, Santa Maria - RS, 97070-030",
+)
+
+AREAS_MAP_IMAGE = FlowImage(
+    url="/templates/mapaAreas.jpeg",
+    alt="Mapa do territorio das areas 19 e 20 da ESF Sao Carlos/Urlandia",
+    caption="Mapa do território das áreas 19 e 20",
 )
 
 
@@ -69,6 +83,7 @@ INFO_OPTIONS = [
     FlowOption("servicos", "Serviços"),
     FlowOption("equipe", "Equipe"),
     FlowOption("endereco", "Endereço"),
+    FlowOption("areas_atendidas", "Áreas atendidas"),
     FlowOption("medicamentos", "Medicamentos/Receitas"),
     FlowOption("voltar_inicio", "Voltar ao início"),
 ]
@@ -179,6 +194,14 @@ CONTENT_RESPONSES: Dict[str, str] = {
         "A ESF fica na R. Agostinho Scolari, 546 - Urlândia, Santa Maria - RS, "
         "97070-030, Brasil."
     ),
+    "areas_atendidas": (
+        "A ESF São Carlos/Urlândia atende os territórios das Áreas 19 e 20, definidos "
+        "pela Secretaria Municipal de Saúde para organizar o acompanhamento das famílias. "
+        "A Área 19 tem aproximadamente 3 mil pessoas cadastradas e a Área 20 cerca de "
+        "2.500 pessoas. Cada área conta com equipe responsável por consultas médicas e "
+        "de enfermagem, visitas domiciliares, acompanhamento de gestantes, crianças, "
+        "idosos e pessoas com doenças crônicas, prevenção em saúde e atualização de cadastros."
+    ),
     "horario": (
         "Atendemos de segunda a sexta-feira, das 8h ao meio-dia e das 13h às 17h.\n"
         "Quartas-feiras à tarde a unidade está fechada para reunião de equipe.\n"
@@ -210,6 +233,7 @@ INTENT_KEYWORDS = {
     "servicos": ["servico", "servicos", "disponivel", "disponiveis", "vacina", "vacinacao", "odontologia"],
     "equipe": ["equipe", "profissional", "profissionais", "enfermeiro", "dentista", "agente"],
     "endereco": ["endereco", "localizacao", "local", "onde", "mapa", "rua"],
+    "areas_atendidas": ["area", "areas", "area 19", "area 20", "territorio", "territorios", "abrangencia", "atendidas"],
     "medicamentos": ["medicamento", "medicamentos", "receita", "receitas", "renovacao", "remedio"],
     "voltar_inicio": ["inicio", "menu", "voltar", "recomecar"],
     "encerrar": ["encerrar", "finalizar", "sair", "tchau", "obrigado", "obrigada"],
@@ -318,7 +342,7 @@ def handle_chat(
             current_node=state_with_payload(SCHEDULING_CONFIRM_NODE, action),
             messages=[
                 f"Você escolheu {SCHEDULING_SLOT_LABELS[action]}.",
-                "Confirme os dados do agendamento: paciente informado, serviço escolhido, profissional disponível, data e horário.",
+                "Confirme os dados do agendamento.",
             ],
             options=SCHEDULING_CONFIRM_OPTIONS,
         )
@@ -351,6 +375,14 @@ def handle_chat(
                 messages=content_response_messages(action),
                 options=AFTER_INFO_OPTIONS,
                 map=UBS_ADDRESS_MAP,
+            )
+
+        if action == "areas_atendidas":
+            return FlowResult(
+                current_node=AFTER_INFO_NODE,
+                messages=content_response_messages(action),
+                options=AFTER_INFO_OPTIONS,
+                image=AREAS_MAP_IMAGE,
             )
 
         return FlowResult(
@@ -475,9 +507,7 @@ def handle_scheduling_document(
     return FlowResult(
         current_node=SCHEDULING_SLOT_NODE,
         messages=[
-            "Backend consulta paciente no SIGSS pelo CPF, RG ou Cartão SUS informado.",
             "Cadastro ativo na ESF.",
-            "Verificado no SIGSS a agenda do profissional conforme o tipo escolhido.",
             "Há horários disponíveis. Escolha uma opção para continuar.",
         ],
         options=random_scheduling_slot_options(),
