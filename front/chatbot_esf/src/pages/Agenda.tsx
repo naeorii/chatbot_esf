@@ -15,7 +15,7 @@ type Appointment = {
   created_at: string
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 const TOKEN_STORAGE_KEY = 'esf-admin-token'
 
 const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
@@ -85,7 +85,7 @@ function Agenda() {
       setAppointments(data)
     } catch (currentError) {
       setAppointments([])
-      setError(currentError instanceof Error ? currentError.message : 'Erro ao carregar agendamentos.')
+      setError(connectionErrorMessage(currentError, 'Erro ao carregar agendamentos.'))
     } finally {
       setIsLoading(false)
     }
@@ -135,7 +135,7 @@ function Agenda() {
         ),
       )
     } catch (currentError) {
-      setError(currentError instanceof Error ? currentError.message : 'Erro ao atualizar status.')
+      setError(connectionErrorMessage(currentError, 'Erro ao atualizar status.'))
     } finally {
       setUpdatingId(null)
     }
@@ -173,7 +173,7 @@ function Agenda() {
         currentAppointments.filter((currentAppointment) => currentAppointment.id !== appointment.id),
       )
     } catch (currentError) {
-      setError(currentError instanceof Error ? currentError.message : 'Erro ao excluir agendamento.')
+      setError(connectionErrorMessage(currentError, 'Erro ao excluir agendamento.'))
     } finally {
       setDeletingId(null)
     }
@@ -312,6 +312,15 @@ function Agenda() {
 
 function adminHeaders(adminToken: string): HeadersInit {
   return adminToken ? { 'X-Admin-Token': adminToken } : {}
+}
+
+function connectionErrorMessage(currentError: unknown, fallbackMessage: string) {
+  if (currentError instanceof TypeError) {
+    const apiDisplayUrl = API_BASE_URL || 'proxy local /api'
+    return `Não consegui conectar com a API em ${apiDisplayUrl}. Verifique se o backend está online e se a URL da API está correta.`
+  }
+
+  return currentError instanceof Error ? currentError.message : fallbackMessage
 }
 
 function todayInputValue() {

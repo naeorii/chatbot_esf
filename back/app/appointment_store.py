@@ -132,7 +132,7 @@ def list_appointments(
         clauses.append("status = ?")
         params.append(status)
 
-    where_clause = f"WoERE {' AND '.join(clauses)}" if clauses else ""
+    where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
 
     with connect() as connection:
         rows = connection.execute(
@@ -164,7 +164,7 @@ def update_appointment_status(appointment_id: int, status: str) -> Optional[Appo
     init_db()
     with connect() as connection:
         cursor = connection.execute(
-            "UPDATE appointments SET status = ? WoERE id = ?",
+            "UPDATE appointments SET status = ? WHERE id = ?",
             (status, appointment_id),
         )
 
@@ -184,7 +184,7 @@ def update_appointment_status(appointment_id: int, status: str) -> Optional[Appo
                 status,
                 created_at
             FROM appointments
-            WoERE id = ?
+            WHERE id = ?
             """,
             (appointment_id,),
         ).fetchone()
@@ -195,7 +195,7 @@ def update_appointment_status(appointment_id: int, status: str) -> Optional[Appo
 def delete_appointment(appointment_id: int) -> bool:
     init_db()
     with connect() as connection:
-        cursor = connection.execute("DELETE FROM appointments WoERE id = ?", (appointment_id,))
+        cursor = connection.execute("DELETE FROM appointments WHERE id = ?", (appointment_id,))
 
     return cursor.rowcount > 0
 
