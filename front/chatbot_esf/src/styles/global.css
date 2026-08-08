@@ -452,6 +452,56 @@ button {
   margin: 0 auto;
 }
 
+.agenda-login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agenda-login-shell {
+  width: min(380px, 100%);
+  border: 1px solid #cde4da;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 24px;
+}
+
+.agenda-login-shell h1 {
+  color: #092f2a;
+  font-size: 24px;
+  line-height: 1.15;
+  margin-bottom: 18px;
+}
+
+.agenda-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.agenda-login-form label {
+  color: #496d65;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.agenda-login-form input {
+  min-height: 40px;
+  border: 1px solid #b8d8ce;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #163d37;
+  padding: 0 10px;
+  outline: none;
+}
+
+.agenda-login-form input:focus {
+  border-color: #0b7466;
+  box-shadow: 0 0 0 3px rgba(11, 116, 102, 0.12);
+}
 .agenda-header {
   min-height: 76px;
   display: flex;
@@ -524,7 +574,7 @@ button {
 
 .agenda-toolbar {
   display: grid;
-  grid-template-columns: 180px 180px minmax(180px, 1fr) auto;
+  grid-template-columns: 180px 180px auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;

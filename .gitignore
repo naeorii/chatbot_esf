@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+
+back/data/*.sqlite3
+back/data/*.sqlite3-*
+
+front/chatbot_esf/dist/
+front/chatbot_esf/vite-dev*.log

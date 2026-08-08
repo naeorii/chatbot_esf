@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 
 type AppointmentStatus = 'novo' | 'confirmado' | 'cancelado' | 'atendido'
 type StatusFilter = AppointmentStatus | 'todos'
@@ -16,7 +17,7 @@ type Appointment = {
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
-const TOKEN_STORAGE_KEY = 'esf-admin-token'
+const AUTH_STORAGE_KEY = 'esf-agenda-auth'
 
 const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
   { value: 'todos', label: 'Todos' },
@@ -37,8 +38,10 @@ function Agenda() {
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [dateFilter, setDateFilter] = useState(todayInputValue())
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('todos')
-  const [adminToken, setAdminToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY) ?? '')
-  const [tokenDraft, setTokenDraft] = useState(adminToken)
+  const [authToken, setAuthToken] = useState(() => sessionStorage.getItem(AUTH_STORAGE_KEY) ?? '')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
@@ -56,6 +59,10 @@ function Agenda() {
   }, [appointments])
 
   const loadAppointments = useCallback(async () => {
+    if (!authToken) {
+      return
+    }
+
     setIsLoading(true)
     setError('')
 
@@ -68,13 +75,16 @@ function Agenda() {
       params.set('status', statusFilter)
     }
 
+    const queryString = params.toString()
+
     try {
-      const response = await fetch(`${API_BASE_URL}/api/appointments?${params.toString()}`, {
-        headers: adminHeaders(adminToken),
+      const response = await fetch(`${API_BASE_URL}/api/appointments${queryString ? `?${queryString}` : ''}`, {
+        headers: authHeaders(authToken),
       })
 
       if (response.status === 401) {
-        throw new Error('Código de acesso inválido.')
+        handleLogout()
+        throw new Error('Usuário ou senha inválidos.')
       }
 
       if (!response.ok) {
@@ -89,24 +99,60 @@ function Agenda() {
     } finally {
       setIsLoading(false)
     }
-  }, [adminToken, dateFilter, statusFilter])
+  }, [authToken, dateFilter, statusFilter])
 
   useEffect(() => {
     void loadAppointments()
   }, [loadAppointments])
 
-  function handleTokenSave() {
-    const trimmedToken = tokenDraft.trim()
-    setAdminToken(trimmedToken)
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const trimmedUsername = username.trim()
 
-    if (trimmedToken) {
-      localStorage.setItem(TOKEN_STORAGE_KEY, trimmedToken)
-    } else {
-      localStorage.removeItem(TOKEN_STORAGE_KEY)
+    if (!trimmedUsername || !password) {
+      setError('Digite usuário e senha para acessar a agenda.')
+      return
+    }
+
+    const nextAuthToken = `Basic ${btoa(`${trimmedUsername}:${password}`)}`
+    setIsAuthenticating(true)
+    setError('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/agenda/session`, {
+        headers: authHeaders(nextAuthToken),
+      })
+
+      if (response.status === 401) {
+        throw new Error('Usuário ou senha inválidos.')
+      }
+
+      if (!response.ok) {
+        throw new Error('Não foi possível acessar a agenda.')
+      }
+
+      sessionStorage.setItem(AUTH_STORAGE_KEY, nextAuthToken)
+      setAuthToken(nextAuthToken)
+      setUsername('')
+      setPassword('')
+    } catch (currentError) {
+      setError(connectionErrorMessage(currentError, 'Erro ao acessar a agenda.'))
+    } finally {
+      setIsAuthenticating(false)
     }
   }
 
+  function handleLogout() {
+    sessionStorage.removeItem(AUTH_STORAGE_KEY)
+    setAuthToken('')
+    setAppointments([])
+  }
+
   async function handleStatusChange(appointmentId: number, status: AppointmentStatus) {
+    if (!authToken) {
+      return
+    }
+
     setUpdatingId(appointmentId)
     setError('')
 
@@ -115,13 +161,14 @@ function Agenda() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...adminHeaders(adminToken),
+          ...authHeaders(authToken),
         },
         body: JSON.stringify({ status }),
       })
 
       if (response.status === 401) {
-        throw new Error('Código de acesso inválido.')
+        handleLogout()
+        throw new Error('Usuário ou senha inválidos.')
       }
 
       if (!response.ok) {
@@ -142,6 +189,10 @@ function Agenda() {
   }
 
   async function handleDelete(appointment: Appointment) {
+    if (!authToken) {
+      return
+    }
+
     const shouldDelete = window.confirm(
       `Excluir o agendamento de ${appointment.patient_name} em ${formatDisplayDate(
         appointment.appointment_date,
@@ -158,11 +209,12 @@ function Agenda() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/appointments/${appointment.id}`, {
         method: 'DELETE',
-        headers: adminHeaders(adminToken),
+        headers: authHeaders(authToken),
       })
 
       if (response.status === 401) {
-        throw new Error('Código de acesso inválido.')
+        handleLogout()
+        throw new Error('Usuário ou senha inválidos.')
       }
 
       if (!response.ok) {
@@ -179,6 +231,45 @@ function Agenda() {
     }
   }
 
+  if (!authToken) {
+    return (
+      <main className="agenda-page agenda-login-page">
+        <section className="agenda-login-shell" aria-label="Acesso à agenda">
+          <span className="agenda-eyebrow">ESF São Carlos/Urlândia</span>
+          <h1>Agenda da unidade</h1>
+
+          <form className="agenda-login-form" onSubmit={handleLogin}>
+            <label>
+              Usuário
+              <input
+                type="text"
+                autoComplete="username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            </label>
+
+            <label>
+              Senha
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+
+            {error && <p className="agenda-error">{error}</p>}
+
+            <button className="agenda-primary-button" type="submit" disabled={isAuthenticating}>
+              {isAuthenticating ? 'Entrando...' : 'Entrar'}
+            </button>
+          </form>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="agenda-page">
       <section className="agenda-shell" aria-label="Agenda da unidade">
@@ -187,6 +278,10 @@ function Agenda() {
             <span className="agenda-eyebrow">ESF São Carlos/Urlândia</span>
             <h1>Agenda da unidade</h1>
           </div>
+
+          <button className="agenda-secondary-button" type="button" onClick={handleLogout}>
+            Sair
+          </button>
         </header>
 
         <section className="agenda-toolbar" aria-label="Filtros da agenda">
@@ -206,20 +301,7 @@ function Agenda() {
             </select>
           </label>
 
-          <label>
-            Código
-            <input
-              type="password"
-              value={tokenDraft}
-              onChange={(event) => setTokenDraft(event.target.value)}
-              placeholder="Opcional"
-            />
-          </label>
-
           <div className="agenda-toolbar-actions">
-            <button className="agenda-secondary-button" type="button" onClick={handleTokenSave}>
-              Salvar código
-            </button>
             <button className="agenda-primary-button" type="button" onClick={() => void loadAppointments()}>
               Atualizar
             </button>
@@ -310,8 +392,8 @@ function Agenda() {
   )
 }
 
-function adminHeaders(adminToken: string): HeadersInit {
-  return adminToken ? { 'X-Admin-Token': adminToken } : {}
+function authHeaders(authToken: string): HeadersInit {
+  return { Authorization: authToken }
 }
 
 function connectionErrorMessage(currentError: unknown, fallbackMessage: string) {

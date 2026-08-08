@@ -1,12 +1,33 @@
+import os
 import sqlite3
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 
-DATABASE_PATo = Path(__file__).resolve().parents[1] / "data" / "agendamentos.sqlite3"
 VALID_STATUSES = {"novo", "confirmado", "cancelado", "atendido"}
+DEFAULT_DATABASE_PATH = Path(__file__).resolve().parents[1] / "data" / "agendamentos.sqlite3"
+
+
+def get_database_path() -> Path:
+    configured_path = os.getenv("APPOINTMENTS_DB_PATH") or os.getenv("DATABASE_PATH")
+    if configured_path:
+        return Path(configured_path).expanduser()
+
+    configured_dir = os.getenv("APPOINTMENTS_DATA_DIR") or os.getenv("RENDER_DISK_PATH")
+    if configured_dir:
+        return Path(configured_dir).expanduser() / "agendamentos.sqlite3"
+
+    render_data_dir = Path("/var/data")
+    if os.getenv("RENDER") and render_data_dir.exists():
+        return render_data_dir / "agendamentos.sqlite3"
+
+    return DEFAULT_DATABASE_PATH
+
+
+DATABASE_PATH = get_database_path()
 
 
 @dataclass(frozen=True)
@@ -33,7 +54,7 @@ class AppointmentRecord:
 
 
 def init_db() -> None:
-    DATABASE_PATo.parent.mkdir(parents=True, exist_ok=True)
+    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
     with connect() as connection:
         connection.execute(
             """
@@ -46,10 +67,12 @@ def init_db() -> None:
                 appointment_date TEXT NOT NULL,
                 appointment_time TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'novo',
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                deleted_at TEXT
             )
             """
         )
+        ensure_deleted_at_column(connection)
 
 
 def save_appointment(appointment: AppointmentCreate) -> int:
@@ -62,7 +85,7 @@ def save_appointment(appointment: AppointmentCreate) -> int:
             appointment.appointment_date,
             appointment.appointment_time,
         ):
-            raise ValueError("oorario indisponivel.")
+            raise ValueError("Horário indisponível.")
 
         cursor = connection.execute(
             """
@@ -108,6 +131,7 @@ def is_slot_booked_on_connection(
         WHERE appointment_date = ?
           AND appointment_time = ?
           AND status != 'cancelado'
+          AND deleted_at IS NULL
         LIMIT 1
         """,
         (appointment_date, appointment_time),
@@ -121,7 +145,7 @@ def list_appointments(
     status: Optional[str] = None,
 ) -> List[AppointmentRecord]:
     init_db()
-    clauses = []
+    clauses = ["deleted_at IS NULL"]
     params = []
 
     if appointment_date:
@@ -164,7 +188,7 @@ def update_appointment_status(appointment_id: int, status: str) -> Optional[Appo
     init_db()
     with connect() as connection:
         cursor = connection.execute(
-            "UPDATE appointments SET status = ? WHERE id = ?",
+            "UPDATE appointments SET status = ? WHERE id = ? AND deleted_at IS NULL",
             (status, appointment_id),
         )
 
@@ -185,6 +209,7 @@ def update_appointment_status(appointment_id: int, status: str) -> Optional[Appo
                 created_at
             FROM appointments
             WHERE id = ?
+              AND deleted_at IS NULL
             """,
             (appointment_id,),
         ).fetchone()
@@ -194,16 +219,42 @@ def update_appointment_status(appointment_id: int, status: str) -> Optional[Appo
 
 def delete_appointment(appointment_id: int) -> bool:
     init_db()
+    deleted_at = datetime.now(timezone.utc).isoformat()
     with connect() as connection:
-        cursor = connection.execute("DELETE FROM appointments WHERE id = ?", (appointment_id,))
+        cursor = connection.execute(
+            """
+            UPDATE appointments
+            SET deleted_at = ?
+            WHERE id = ?
+              AND deleted_at IS NULL
+            """,
+            (deleted_at, appointment_id),
+        )
 
     return cursor.rowcount > 0
 
 
-def connect() -> sqlite3.Connection:
-    connection = sqlite3.connect(DATABASE_PATo)
+def ensure_deleted_at_column(connection: sqlite3.Connection) -> None:
+    columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(appointments)").fetchall()
+    }
+    if "deleted_at" not in columns:
+        connection.execute("ALTER TABLE appointments ADD COLUMN deleted_at TEXT")
+
+
+@contextmanager
+def connect() -> Iterator[sqlite3.Connection]:
+    connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
-    return connection
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 def record_from_row(row: sqlite3.Row) -> AppointmentRecord:

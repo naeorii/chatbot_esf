@@ -1,3 +1,6 @@
+import base64
+import binascii
+import hmac
 import os
 from pathlib import Path
 from typing import List, Optional
@@ -70,6 +73,8 @@ class AppointmentStatusRequest(BaseModel):
 app = FastAPI(title="ESF Assistente API", version="0.1.0")
 MAP_AREAS_IMAGE_PATH = Path(__file__).resolve().parents[2] / "templates" / "mapaAreas.jpeg"
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+AGENDA_USERNAME = os.getenv("AGENDA_USERNAME", "urlandia")
+AGENDA_PASSWORD = os.getenv("AGENDA_PASSWORD", "agenda#439")
 
 cors_origins = [
     "http://localhost:5173",
@@ -143,14 +148,20 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     return serialize(result)
 
+@app.get("/api/agenda/session")
+def agenda_session(
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+) -> dict:
+    verify_agenda_credentials(authorization)
+    return {"authenticated": True}
 
 @app.get("/api/appointments", response_model=List[AppointmentResponse])
 def get_appointments(
     appointment_date: Optional[str] = Query(default=None, alias="date"),
     status: Optional[str] = None,
-    admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
 ) -> List[AppointmentResponse]:
-    verify_admin_token(admin_token)
+    verify_agenda_credentials(authorization)
     return [serialize_appointment(appointment) for appointment in list_appointments(appointment_date, status)]
 
 
@@ -158,9 +169,9 @@ def get_appointments(
 def update_status(
     appointment_id: int,
     request: AppointmentStatusRequest,
-    admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
 ) -> AppointmentResponse:
-    verify_admin_token(admin_token)
+    verify_agenda_credentials(authorization)
     try:
         appointment = update_appointment_status(appointment_id, request.status)
     except ValueError as error:
@@ -175,9 +186,9 @@ def update_status(
 @app.delete("/api/appointments/{appointment_id}")
 def delete_appointment_route(
     appointment_id: int,
-    admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
 ) -> dict:
-    verify_admin_token(admin_token)
+    verify_agenda_credentials(authorization)
     was_deleted = delete_appointment(appointment_id)
 
     if not was_deleted:
@@ -200,6 +211,23 @@ def serialize(result: FlowResult) -> ChatResponse:
 def serialize_appointment(appointment: AppointmentRecord) -> AppointmentResponse:
     return AppointmentResponse(**appointment.__dict__)
 
+def verify_agenda_credentials(authorization: Optional[str]) -> None:
+    if not authorization or not authorization.startswith("Basic "):
+        raise HTTPException(status_code=401, detail="Acesso não autorizado.")
+
+    encoded_credentials = authorization.removeprefix("Basic ").strip()
+    try:
+        decoded_credentials = base64.b64decode(encoded_credentials).decode("utf-8")
+    except (binascii.Error, UnicodeDecodeError) as error:
+        raise HTTPException(status_code=401, detail="Acesso não autorizado.") from error
+
+    username, separator, password = decoded_credentials.partition(":")
+    if (
+        not separator
+        or not hmac.compare_digest(username, AGENDA_USERNAME)
+        or not hmac.compare_digest(password, AGENDA_PASSWORD)
+    ):
+        raise HTTPException(status_code=401, detail="Usuário ou senha inválidos.")
 
 def verify_admin_token(admin_token: Optional[str]) -> None:
     if ADMIN_TOKEN and admin_token != ADMIN_TOKEN:
