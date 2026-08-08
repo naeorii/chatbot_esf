@@ -2,11 +2,18 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+from app.appointment_store import (
+    AppointmentCreate,
+    AppointmentRecord,
+    list_appointments,
+    save_appointment,
+    update_appointment_status,
+)
 from app.chat_flow import FlowResult, handle_chat, start_response
 
 
@@ -43,8 +50,25 @@ class ChatResponse(BaseModel):
     image: Optional[ChatImage] = None
 
 
+class AppointmentResponse(BaseModel):
+    id: int
+    patient_name: str
+    document_masked: str
+    service: str
+    professional: str
+    appointment_date: str
+    appointment_time: str
+    status: str
+    created_at: str
+
+
+class AppointmentStatusRequest(BaseModel):
+    status: str
+
+
 app = FastAPI(title="ESF Assistente API", version="0.1.0")
 MAP_AREAS_IMAGE_PATH = Path(__file__).resolve().parents[2] / "templates" / "mapaAreas.jpeg"
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 
 cors_origins = [
     "http://localhost:5173",
@@ -83,7 +107,48 @@ def start_chat() -> ChatResponse:
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
-    return serialize(handle_chat(message=request.message, option_id=request.option_id, current_node=request.current_node))
+    result = handle_chat(message=request.message, option_id=request.option_id, current_node=request.current_node)
+    if result.appointment:
+        save_appointment(
+            AppointmentCreate(
+                patient_name=result.appointment.patient_name,
+                document=result.appointment.document,
+                service=result.appointment.service,
+                professional=result.appointment.professional,
+                appointment_date=result.appointment.appointment_date,
+                appointment_time=result.appointment.appointment_time,
+            )
+        )
+
+    return serialize(result)
+
+
+@app.get("/api/appointments", response_model=List[AppointmentResponse])
+def get_appointments(
+    appointment_date: Optional[str] = Query(default=None, alias="date"),
+    status: Optional[str] = None,
+    admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+) -> List[AppointmentResponse]:
+    verify_admin_token(admin_token)
+    return [serialize_appointment(appointment) for appointment in list_appointments(appointment_date, status)]
+
+
+@app.patch("/api/appointments/{appointment_id}/status", response_model=AppointmentResponse)
+def update_status(
+    appointment_id: int,
+    request: AppointmentStatusRequest,
+    admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+) -> AppointmentResponse:
+    verify_admin_token(admin_token)
+    try:
+        appointment = update_appointment_status(appointment_id, request.status)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Agendamento nao encontrado.")
+
+    return serialize_appointment(appointment)
 
 
 def serialize(result: FlowResult) -> ChatResponse:
@@ -95,3 +160,12 @@ def serialize(result: FlowResult) -> ChatResponse:
         map=ChatMap(**result.map.__dict__) if result.map else None,
         image=ChatImage(**result.image.__dict__) if result.image else None,
     )
+
+
+def serialize_appointment(appointment: AppointmentRecord) -> AppointmentResponse:
+    return AppointmentResponse(**appointment.__dict__)
+
+
+def verify_admin_token(admin_token: Optional[str]) -> None:
+    if ADMIN_TOKEN and admin_token != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Codigo de acesso invalido.")

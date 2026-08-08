@@ -438,7 +438,7 @@ function Chatbot() {
           </div>
 
           <div className="header-text">
-            <h1>ESF São Carlos</h1>
+            <h1>Etratégia Saúde pela Família</h1>
             <p className={`presence ${ended ? 'presence-ended' : ''}`}>
               <span className="presence-dot" />
               {ended ? 'encerrado' : 'online'}

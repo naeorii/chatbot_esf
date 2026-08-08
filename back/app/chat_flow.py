@@ -1,8 +1,9 @@
-import random
 import re
 import unicodedata
 from dataclasses import dataclass
+from datetime import date, timedelta
 from typing import Dict, List, Optional
+from urllib.parse import parse_qsl, quote, unquote, urlencode
 
 
 START_NODE = "inicio"
@@ -19,6 +20,12 @@ UNIT_SITE_URL = "https://urlandiaesf.lovable.app/"
 UNIT_FACEBOOK_URL = (
     "https://www.facebook.com/people/Esf-Url%C3%A2ndia/61579852984607/?locale=pt_BR"
 )
+SCHEDULING_INSURANCE_LABEL = "SUS"
+SCHEDULING_LOOKAHEAD_DAYS = 7
+SCHEDULING_SHIFT_TIMES = {
+    "manha": "10:00",
+    "tarde": "14:00",
+}
 INFO_SUGGESTION_MESSAGE = (
     "Para acessar mais informações, visite o site da unidade: "
     f"{UNIT_SITE_URL} ou acompanhe o Facebook: {UNIT_FACEBOOK_URL}"
@@ -47,6 +54,16 @@ class FlowImage:
 
 
 @dataclass(frozen=True)
+class FlowAppointment:
+    patient_name: str
+    document: str
+    service: str
+    professional: str
+    appointment_date: str
+    appointment_time: str
+
+
+@dataclass(frozen=True)
 class FlowResult:
     current_node: str
     messages: List[str]
@@ -54,18 +71,19 @@ class FlowResult:
     ended: bool = False
     map: Optional[FlowMap] = None
     image: Optional[FlowImage] = None
+    appointment: Optional[FlowAppointment] = None
 
 
 UBS_ADDRESS_MAP = FlowMap(
     latitude=-29.712747,
     longitude=-53.8217719,
-    label="ESF Sao Carlos/Urlandia",
+    label="ESF Sao Carlos/Urlândia",
     address="R. Agostinho Scolari, 546 - Urlândia, Santa Maria - RS, 97070-030",
 )
 
 AREAS_MAP_IMAGE = FlowImage(
     url="/templates/mapaAreas.jpeg",
-    alt="Mapa do territorio das areas 19 e 20 da ESF Sao Carlos/Urlandia",
+    alt="Mapa do territorio das áreas 19 e 20 da ESF Sao Carlos/Urlândia",
     caption="Mapa do território das áreas 19 e 20",
 )
 
@@ -102,6 +120,7 @@ SCHEDULING_OPTIONS = [
 ]
 
 AFTER_SCHEDULING_OPTIONS = [
+    FlowOption("agendamento", "Realizar outro agendamento"),
     FlowOption("informacoes", "Ver informações da unidade"),
     FlowOption("voltar_inicio", "Voltar ao início"),
     FlowOption("encerrar", "Encerrar atendimento"),
@@ -113,28 +132,31 @@ SCHEDULING_SERVICE_LABELS = {
     "agendar_medico": "médico",
 }
 
-SCHEDULING_SLOT_OPTIONS = [
-    FlowOption("agendamento_horario_seg_08", "Segunda-feira, 8h"),
-    FlowOption("agendamento_horario_seg_1030", "Segunda-feira, 10h30"),
-    FlowOption("agendamento_horario_ter_09", "Terça-feira, 9h"),
-    FlowOption("agendamento_horario_ter_14", "Terça-feira, 14h"),
-    FlowOption("agendamento_horario_qua_08", "Quarta-feira, 8h"),
-    FlowOption("agendamento_horario_qui_10", "Quinta-feira, 10h"),
-    FlowOption("agendamento_horario_qui_1530", "Quinta-feira, 15h30"),
-    FlowOption("agendamento_horario_sex_0830", "Sexta-feira, 8h30"),
-    FlowOption("agendamento_horario_sex_1330", "Sexta-feira, 13h30"),
-]
+SCHEDULING_SERVICE_DISPLAY_LABELS = {
+    "agendar_dentista": "Dentista",
+    "agendar_enfermagem": "Enfermagem",
+    "agendar_medico": "Médico",
+}
 
-SCHEDULING_SLOT_LABELS = {
-    "agendamento_horario_seg_08": "segunda-feira, 8h",
-    "agendamento_horario_seg_1030": "segunda-feira, 10h30",
-    "agendamento_horario_ter_09": "terça-feira, 9h",
-    "agendamento_horario_ter_14": "terça-feira, 14h",
-    "agendamento_horario_qua_08": "quarta-feira, 8h",
-    "agendamento_horario_qui_10": "quinta-feira, 10h",
-    "agendamento_horario_qui_1530": "quinta-feira, 15h30",
-    "agendamento_horario_sex_0830": "sexta-feira, 8h30",
-    "agendamento_horario_sex_1330": "sexta-feira, 13h30",
+SCHEDULING_PROFESSIONAL_LABELS = {
+    "agendar_dentista": "Cirurgião-dentista da ESF São Carlos/Urlândia",
+    "agendar_enfermagem": "Equipe de enfermagem da ESF São Carlos/Urlândia",
+    "agendar_medico": "Equipe médica da ESF São Carlos/Urlândia",
+}
+
+SCHEDULING_SLOT_OPTION_PREFIX = "agendamento_horario_"
+SCHEDULING_WEEKDAY_LABELS = [
+    "segunda-feira",
+    "terça-feira",
+    "quarta-feira",
+    "quinta-feira",
+    "sexta-feira",
+    "sábado",
+    "domingo",
+]
+SCHEDULING_SHIFT_LABELS = {
+    "manha": "Manhã",
+    "tarde": "Tarde",
 }
 
 SCHEDULING_CONFIRM_OPTIONS = [
@@ -270,18 +292,125 @@ def start_response() -> FlowResult:
     )
 
 
-def random_scheduling_slot_options() -> List[FlowOption]:
-    return random.sample(SCHEDULING_SLOT_OPTIONS, k=3)
+def scheduling_slot_options(today: Optional[date] = None) -> List[FlowOption]:
+    start_date = today or date.today()
+    options: List[FlowOption] = []
+
+    for offset in range(SCHEDULING_LOOKAHEAD_DAYS + 1):
+        slot_date = start_date + timedelta(days=offset)
+        if slot_date.weekday() >= 5:
+            continue
+
+        for shift in SCHEDULING_SHIFT_TIMES:
+            if slot_date.weekday() == 2 and shift == "tarde":
+                continue
+
+            options.append(
+                FlowOption(
+                    slot_option_id(slot_date, shift),
+                    f"{date_display_label(slot_date, start_date)} - "
+                    f"{SCHEDULING_SHIFT_LABELS[shift]}, {format_date(slot_date)}, "
+                    f"{SCHEDULING_SHIFT_TIMES[shift]}",
+                )
+            )
+
+    return options
+
+
+def slot_option_id(slot_date: date, shift: str) -> str:
+    return f"{SCHEDULING_SLOT_OPTION_PREFIX}{slot_date:%Y%m%d}_{shift}"
+
+
+def is_scheduling_slot_action(action: str) -> bool:
+    return slot_details(action) is not None
+
+
+def slot_label(slot_id: str) -> str:
+    details = slot_details(slot_id)
+    if not details:
+        return "horário selecionado"
+
+    return f"{details['weekday']}, {details['date']} às {details['time']}"
+
+
+def slot_details(slot_id: str) -> Optional[Dict[str, str]]:
+    match = re.fullmatch(rf"{SCHEDULING_SLOT_OPTION_PREFIX}(\d{{8}})_(manha|tarde)", slot_id)
+    if not match:
+        return None
+
+    raw_date, shift = match.groups()
+    slot_date = date(int(raw_date[:4]), int(raw_date[4:6]), int(raw_date[6:]))
+    return {
+        "date_iso": slot_date.isoformat(),
+        "date": format_date(slot_date),
+        "time": SCHEDULING_SHIFT_TIMES[shift],
+        "shift": SCHEDULING_SHIFT_LABELS[shift],
+        "weekday": SCHEDULING_WEEKDAY_LABELS[slot_date.weekday()],
+    }
+
+
+def date_display_label(slot_date: date, today: date) -> str:
+    if slot_date == today:
+        return "Hoje"
+
+    if slot_date == today + timedelta(days=1):
+        return "Amanhã"
+
+    return SCHEDULING_WEEKDAY_LABELS[slot_date.weekday()].capitalize()
+
+
+def format_date(value: date) -> str:
+    return value.strftime("%d/%m/%Y")
 
 
 def scheduling_confirmation_message(current_node: Optional[str]) -> str:
-    selected_slot = state_payload(current_node or "")
-    selected_slot_label = SCHEDULING_SLOT_LABELS.get(selected_slot)
+    payload = schedule_payload(current_node or "")
+    patient_name = payload.get("name", "paciente").strip()
+    service_action = payload.get("service", "")
+    slot_id = payload.get("slot", "")
+    slot = slot_details(slot_id) or {
+        "date_iso": date.today().isoformat(),
+        "date": format_date(date.today()),
+        "time": SCHEDULING_SHIFT_TIMES["manha"],
+        "shift": SCHEDULING_SHIFT_LABELS["manha"],
+    }
+    service_label = SCHEDULING_SERVICE_DISPLAY_LABELS.get(service_action, "Consulta")
+    professional_label = SCHEDULING_PROFESSIONAL_LABELS.get(
+        service_action,
+        "Equipe da ESF São Carlos/Urlândia",
+    )
 
-    if selected_slot_label:
-        return f"Agendamento confirmado para {selected_slot_label}."
+    return (
+        f"Olá, {patient_name.upper()} você possui um agendamento conosco.\n\n"
+        f"🗓️ {slot['date']}     ⏰ {slot['time']}hrs\n"
+        f"Convênio: {SCHEDULING_INSURANCE_LABEL}\n"
+        f"Serviço: {service_label}\n"
+        f"Profissional: {professional_label}\n"
+        f"Endereço: {UBS_ADDRESS_MAP.address}\n\n"
+        "🪪 Apresentar RG, CPF e Cartão SUS.\n\n"
+        "📝 Solicite seu atestado durante a consulta.\n\n"
+        "🗓️ Agende seu retorno ao sair da consulta"
+    )
 
-    return "Agendamento confirmado."
+
+def scheduling_appointment(current_node: Optional[str]) -> Optional[FlowAppointment]:
+    payload = schedule_payload(current_node or "")
+    slot = slot_details(payload.get("slot", ""))
+    if not slot:
+        return None
+
+    service_action = payload.get("service", "")
+    return FlowAppointment(
+        patient_name=payload.get("name", "Paciente").strip() or "Paciente",
+        document=payload.get("document", ""),
+        service=SCHEDULING_SERVICE_DISPLAY_LABELS.get(service_action, "Consulta"),
+        professional=SCHEDULING_PROFESSIONAL_LABELS.get(
+            service_action,
+            "Equipe da ESF São Carlos/Urlândia",
+        ),
+        appointment_date=slot["date_iso"],
+        appointment_time=slot["time"],
+    )
 
 
 def handle_chat(
@@ -337,21 +466,32 @@ def handle_chat(
             options=[],
         )
 
-    if action in SCHEDULING_SLOT_LABELS:
+    if is_scheduling_slot_action(action):
+        payload = schedule_payload(current_node or "")
+        payload["slot"] = action
+        service_label = SCHEDULING_SERVICE_DISPLAY_LABELS.get(payload.get("service", ""), "Consulta")
+        selected_slot_label = slot_label(action)
         return FlowResult(
-            current_node=state_with_payload(SCHEDULING_CONFIRM_NODE, action),
+            current_node=state_with_schedule_payload(SCHEDULING_CONFIRM_NODE, payload),
             messages=[
-                f"Você escolheu {SCHEDULING_SLOT_LABELS[action]}.",
-                "Confirme os dados do agendamento.",
+                f"Você escolheu {selected_slot_label}.",
+                (
+                    "Confira os dados do agendamento:\n"
+                    f"Paciente: {payload.get('name', 'não informado')}\n"
+                    f"Serviço: {service_label}\n"
+                    f"Horário: {selected_slot_label}"
+                ),
             ],
             options=SCHEDULING_CONFIRM_OPTIONS,
         )
 
     if action == "agendamento_trocar_horario":
+        payload = schedule_payload(current_node or "")
+        payload.pop("slot", None)
         return FlowResult(
-            current_node=SCHEDULING_SLOT_NODE,
+            current_node=state_with_schedule_payload(SCHEDULING_SLOT_NODE, payload),
             messages=["Escolha outro horário disponível."],
-            options=random_scheduling_slot_options(),
+            options=scheduling_slot_options(),
         )
 
     if action == "agendamento_cancelar":
@@ -364,8 +504,12 @@ def handle_chat(
     if action == "agendamento_confirmar":
         return FlowResult(
             current_node=AFTER_SCHEDULING_NODE,
-            messages=[scheduling_confirmation_message(current_node)],
-            options=[],
+            messages=[
+                scheduling_confirmation_message(current_node),
+                "Deseja mais alguma coisa?",
+            ],
+            options=AFTER_SCHEDULING_OPTIONS,
+            appointment=scheduling_appointment(current_node),
         )
 
     if action in CONTENT_RESPONSES:
@@ -475,8 +619,12 @@ def handle_scheduling_name(
         )
 
     service_action = state_payload(current_node)
+    payload = {
+        "service": service_action,
+        "name": normalize_patient_name(message or ""),
+    }
     return FlowResult(
-        current_node=state_with_payload(SCHEDULING_DOCUMENT_NODE, service_action),
+        current_node=state_with_schedule_payload(SCHEDULING_DOCUMENT_NODE, payload),
         messages=["Digite o CPF, RG ou Cartão SUS do paciente."],
         options=[],
     )
@@ -493,7 +641,7 @@ def handle_scheduling_document(
     if not (message or "").strip():
         return FlowResult(
             current_node=current_node,
-            messages=["Digite o CPF, RG ou Cartão SUS para consultar o cadastro no SIGSS."],
+            messages=["Digite o CPF, RG ou Cartão SUS para continuar o agendamento."],
             options=[],
         )
 
@@ -504,20 +652,42 @@ def handle_scheduling_document(
             options=[],
         )
 
+    payload = schedule_payload(current_node)
+    payload["document"] = normalize_document(message or "")
     return FlowResult(
-        current_node=SCHEDULING_SLOT_NODE,
+        current_node=state_with_schedule_payload(SCHEDULING_SLOT_NODE, payload),
         messages=[
-            "Cadastro ativo na ESF.",
-            "Há horários disponíveis. Escolha uma opção para continuar.",
+            "Encontrei horários disponíveis.",
+            "Escolha uma data e horário para continuar.",
         ],
-        options=random_scheduling_slot_options(),
+        options=scheduling_slot_options(),
     )
 
 
 def state_with_payload(node: str, value: str) -> str:
-    return f"{node}:{value}"
+    return f"{node}:{quote(value, safe='')}"
+
+
+def state_with_schedule_payload(node: str, payload: Dict[str, str]) -> str:
+    return f"{node}:{urlencode(payload)}"
 
 
 def state_payload(current_node: str) -> str:
+    return unquote(raw_state_payload(current_node))
+
+
+def raw_state_payload(current_node: str) -> str:
     parts = current_node.split(":", 1)
     return parts[1] if len(parts) == 2 else ""
+
+
+def schedule_payload(current_node: str) -> Dict[str, str]:
+    return dict(parse_qsl(raw_state_payload(current_node), keep_blank_values=True))
+
+
+def normalize_patient_name(message: str) -> str:
+    return " ".join(message.split())
+
+
+def normalize_document(message: str) -> str:
+    return " ".join(message.split())
