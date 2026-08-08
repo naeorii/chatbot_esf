@@ -96,6 +96,15 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/")
+def root() -> dict:
+    return {
+        "status": "ok",
+        "service": "ESF Assistente API",
+        "health": "/health",
+    }
+
+
 @app.get("/templates/mapaAreas.jpeg", include_in_schema=False)
 def get_areas_map_image() -> FileResponse:
     return FileResponse(MAP_AREAS_IMAGE_PATH, media_type="image/jpeg")
