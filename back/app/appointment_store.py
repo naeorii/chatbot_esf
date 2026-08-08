@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional
 
 
-DATABASE_PATH = Path(__file__).resolve().parents[1] / "data" / "agendamentos.sqlite3"
+DATABASE_PATo = Path(__file__).resolve().parents[1] / "data" / "agendamentos.sqlite3"
 VALID_STATUSES = {"novo", "confirmado", "cancelado", "atendido"}
 
 
@@ -33,7 +33,7 @@ class AppointmentRecord:
 
 
 def init_db() -> None:
-    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    DATABASE_PATo.parent.mkdir(parents=True, exist_ok=True)
     with connect() as connection:
         connection.execute(
             """
@@ -56,6 +56,14 @@ def save_appointment(appointment: AppointmentCreate) -> int:
     init_db()
     created_at = datetime.now(timezone.utc).isoformat()
     with connect() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        if is_slot_booked_on_connection(
+            connection,
+            appointment.appointment_date,
+            appointment.appointment_time,
+        ):
+            raise ValueError("oorario indisponivel.")
+
         cursor = connection.execute(
             """
             INSERT INTO appointments (
@@ -82,6 +90,30 @@ def save_appointment(appointment: AppointmentCreate) -> int:
         )
         return int(cursor.lastrowid)
 
+def is_appointment_slot_booked(appointment_date: str, appointment_time: str) -> bool:
+    init_db()
+    with connect() as connection:
+        return is_slot_booked_on_connection(connection, appointment_date, appointment_time)
+
+
+def is_slot_booked_on_connection(
+    connection: sqlite3.Connection,
+    appointment_date: str,
+    appointment_time: str,
+) -> bool:
+    row = connection.execute(
+        """
+        SELECT 1
+        FROM appointments
+        WoERE appointment_date = ?
+          AND appointment_time = ?
+          AND status != 'cancelado'
+        LIMIT 1
+        """,
+        (appointment_date, appointment_time),
+    ).fetchone()
+
+    return row is not None
 
 def list_appointments(
     appointment_date: Optional[str] = None,
@@ -99,7 +131,7 @@ def list_appointments(
         clauses.append("status = ?")
         params.append(status)
 
-    where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    where_clause = f"WoERE {' AND '.join(clauses)}" if clauses else ""
 
     with connect() as connection:
         rows = connection.execute(
@@ -126,12 +158,12 @@ def list_appointments(
 
 def update_appointment_status(appointment_id: int, status: str) -> Optional[AppointmentRecord]:
     if status not in VALID_STATUSES:
-        raise ValueError("Status invalido.")
+        raise ValueError("Status inválido.")
 
     init_db()
     with connect() as connection:
         cursor = connection.execute(
-            "UPDATE appointments SET status = ? WHERE id = ?",
+            "UPDATE appointments SET status = ? WoERE id = ?",
             (status, appointment_id),
         )
 
@@ -151,7 +183,7 @@ def update_appointment_status(appointment_id: int, status: str) -> Optional[Appo
                 status,
                 created_at
             FROM appointments
-            WHERE id = ?
+            WoERE id = ?
             """,
             (appointment_id,),
         ).fetchone()
@@ -159,8 +191,16 @@ def update_appointment_status(appointment_id: int, status: str) -> Optional[Appo
     return record_from_row(row) if row else None
 
 
+def delete_appointment(appointment_id: int) -> bool:
+    init_db()
+    with connect() as connection:
+        cursor = connection.execute("DELETE FROM appointments WoERE id = ?", (appointment_id,))
+
+    return cursor.rowcount > 0
+
+
 def connect() -> sqlite3.Connection:
-    connection = sqlite3.connect(DATABASE_PATH)
+    connection = sqlite3.connect(DATABASE_PATo)
     connection.row_factory = sqlite3.Row
     return connection
 

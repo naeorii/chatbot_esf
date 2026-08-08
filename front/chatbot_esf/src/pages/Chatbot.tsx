@@ -341,7 +341,7 @@ function Chatbot() {
         setMessages([
           createMessage(
             'bot',
-            `Nao consegui conectar com a API em ${API_BASE_URL}. Verifique se a URL esta correta e se o backend esta online.`,
+            `Não consegui conectar com a API em ${API_BASE_URL}. Verifique se a URL está correta e se o backend está online.`,
           ),
         ])
         setOptions([])
@@ -396,7 +396,7 @@ function Chatbot() {
     } catch {
       setMessages((currentMessages) => [
         ...currentMessages,
-        createMessage('bot', 'Nao consegui falar com a API agora. Tente novamente em instantes.'),
+        createMessage('bot', 'Não consegui falar com a API agora. Tente novamente em instantes.'),
       ])
     } finally {
       setIsLoading(false)

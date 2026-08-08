@@ -41,6 +41,7 @@ function Agenda() {
   const [tokenDraft, setTokenDraft] = useState(adminToken)
   const [isLoading, setIsLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [error, setError] = useState('')
 
   const totals = useMemo(() => {
@@ -140,6 +141,44 @@ function Agenda() {
     }
   }
 
+  async function handleDelete(appointment: Appointment) {
+    const shouldDelete = window.confirm(
+      `Excluir o agendamento de ${appointment.patient_name} em ${formatDisplayDate(
+        appointment.appointment_date,
+      )} às ${appointment.appointment_time}?`,
+    )
+
+    if (!shouldDelete) {
+      return
+    }
+
+    setDeletingId(appointment.id)
+    setError('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/appointments/${appointment.id}`, {
+        method: 'DELETE',
+        headers: adminHeaders(adminToken),
+      })
+
+      if (response.status === 401) {
+        throw new Error('Código de acesso inválido.')
+      }
+
+      if (!response.ok) {
+        throw new Error('Não foi possível excluir o agendamento.')
+      }
+
+      setAppointments((currentAppointments) =>
+        currentAppointments.filter((currentAppointment) => currentAppointment.id !== appointment.id),
+      )
+    } catch (currentError) {
+      setError(currentError instanceof Error ? currentError.message : 'Erro ao excluir agendamento.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <main className="agenda-page">
       <section className="agenda-shell" aria-label="Agenda da unidade">
@@ -215,6 +254,7 @@ function Agenda() {
             <span>Serviço</span>
             <span>Profissional</span>
             <span>Status</span>
+            <span>Ações</span>
           </div>
 
           {isLoading ? (
@@ -253,6 +293,14 @@ function Agenda() {
                     ))}
                   </select>
                 </label>
+                <button
+                  className="agenda-danger-button"
+                  type="button"
+                  disabled={deletingId === appointment.id || updatingId === appointment.id}
+                  onClick={() => void handleDelete(appointment)}
+                >
+                  {deletingId === appointment.id ? 'Excluindo...' : 'Excluir'}
+                </button>
               </article>
             ))
           )}

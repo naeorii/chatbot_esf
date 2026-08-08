@@ -5,6 +5,8 @@ from datetime import date, timedelta
 from typing import Dict, List, Optional
 from urllib.parse import parse_qsl, quote, unquote, urlencode
 
+from app.appointment_store import is_appointment_slot_booked
+
 
 START_NODE = "inicio"
 INFO_NODE = "informacoes"
@@ -178,7 +180,7 @@ SCHEDULING_SERVICE_INTENTS = {
 
 CONTENT_RESPONSES: Dict[str, str] = {
     "coleta": (
-        "A coleta laboratorial (LABVIDA) sem agendamento prévio acontece as terças e "
+        "A coleta laboratorial (LABVIDA) sem agendamento prévio acontece às terças e "
         "quintas-feiras, às 8h. Lembre-se do jejum quando indicado pelo médico e leve "
         "seu pedido de exame e Cartão SUS."
     ),
@@ -305,16 +307,47 @@ def scheduling_slot_options(today: Optional[date] = None) -> List[FlowOption]:
             if slot_date.weekday() == 2 and shift == "tarde":
                 continue
 
+            slot_time = SCHEDULING_SHIFT_TIMES[shift]
+            if is_appointment_slot_booked(slot_date.isoformat(), slot_time):
+                continue
+
             options.append(
                 FlowOption(
                     slot_option_id(slot_date, shift),
                     f"{date_display_label(slot_date, start_date)} - "
                     f"{SCHEDULING_SHIFT_LABELS[shift]}, {format_date(slot_date)}, "
-                    f"{SCHEDULING_SHIFT_TIMES[shift]}",
+                    f"{slot_time}",
                 )
             )
 
     return options
+
+
+def slot_is_available(slot_id: str) -> bool:
+    details = slot_details(slot_id)
+    if not details:
+        return False
+
+    return not is_appointment_slot_booked(details["date_iso"], details["time"])
+
+
+def scheduling_slot_selection_result(payload: Dict[str, str], messages: List[str]) -> FlowResult:
+    options = scheduling_slot_options()
+    if options:
+        return FlowResult(
+            current_node=state_with_schedule_payload(SCHEDULING_SLOT_NODE, payload),
+            messages=messages,
+            options=options,
+        )
+
+    return FlowResult(
+        current_node=AFTER_SCHEDULING_NODE,
+        messages=[
+            "No momento não encontrei horários disponíveis para os próximos dias.",
+            "Deseja mais alguma coisa?",
+        ],
+        options=AFTER_SCHEDULING_OPTIONS,
+    )
 
 
 def slot_option_id(slot_date: date, shift: str) -> str:
@@ -468,6 +501,16 @@ def handle_chat(
 
     if is_scheduling_slot_action(action):
         payload = schedule_payload(current_node or "")
+        if not slot_is_available(action):
+            payload.pop("slot", None)
+            return scheduling_slot_selection_result(
+                payload,
+                [
+                    "Esse horário acabou de ser ocupado.",
+                    "Escolha outro horário disponível.",
+                ],
+            )
+
         payload["slot"] = action
         service_label = SCHEDULING_SERVICE_DISPLAY_LABELS.get(payload.get("service", ""), "Consulta")
         selected_slot_label = slot_label(action)
@@ -488,10 +531,9 @@ def handle_chat(
     if action == "agendamento_trocar_horario":
         payload = schedule_payload(current_node or "")
         payload.pop("slot", None)
-        return FlowResult(
-            current_node=state_with_schedule_payload(SCHEDULING_SLOT_NODE, payload),
-            messages=["Escolha outro horário disponível."],
-            options=scheduling_slot_options(),
+        return scheduling_slot_selection_result(
+            payload,
+            ["Escolha outro horário disponível."],
         )
 
     if action == "agendamento_cancelar":
@@ -502,6 +544,18 @@ def handle_chat(
         )
 
     if action == "agendamento_confirmar":
+        appointment = scheduling_appointment(current_node)
+        if appointment and is_appointment_slot_booked(appointment.appointment_date, appointment.appointment_time):
+            payload = schedule_payload(current_node or "")
+            payload.pop("slot", None)
+            return scheduling_slot_selection_result(
+                payload,
+                [
+                    "Esse horário acabou de ser ocupado antes da confirmação.",
+                    "Escolha outro horário disponível.",
+                ],
+            )
+
         return FlowResult(
             current_node=AFTER_SCHEDULING_NODE,
             messages=[
@@ -509,7 +563,7 @@ def handle_chat(
                 "Deseja mais alguma coisa?",
             ],
             options=AFTER_SCHEDULING_OPTIONS,
-            appointment=scheduling_appointment(current_node),
+            appointment=appointment,
         )
 
     if action in CONTENT_RESPONSES:
@@ -614,7 +668,7 @@ def handle_scheduling_name(
     if not is_valid_patient_name(message or ""):
         return FlowResult(
             current_node=current_node,
-            messages=["Nao identifiquei um nome completo de paciente. Digite novamente o nome completo para continuar."],
+            messages=["Não identifiquei um nome completo de paciente. Digite novamente o nome completo para continuar."],
             options=[],
         )
 
@@ -648,19 +702,18 @@ def handle_scheduling_document(
     if looks_like_patient_name(message or ""):
         return FlowResult(
             current_node=current_node,
-            messages=["Nao identifiquei CPF, RG ou Cartao SUS. Digite novamente um documento do paciente para continuar."],
+            messages=["Não identifiquei CPF, RG ou Cartão SUS. Digite novamente um documento do paciente para continuar."],
             options=[],
         )
 
     payload = schedule_payload(current_node)
     payload["document"] = normalize_document(message or "")
-    return FlowResult(
-        current_node=state_with_schedule_payload(SCHEDULING_SLOT_NODE, payload),
-        messages=[
+    return scheduling_slot_selection_result(
+        payload,
+        [
             "Encontrei horários disponíveis.",
             "Escolha uma data e horário para continuar.",
         ],
-        options=scheduling_slot_options(),
     )
 
 

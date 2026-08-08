@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from app.appointment_store import (
     AppointmentCreate,
     AppointmentRecord,
+    delete_appointment,
     list_appointments,
     save_appointment,
     update_appointment_status,
@@ -109,16 +110,27 @@ def start_chat() -> ChatResponse:
 def chat(request: ChatRequest) -> ChatResponse:
     result = handle_chat(message=request.message, option_id=request.option_id, current_node=request.current_node)
     if result.appointment:
-        save_appointment(
-            AppointmentCreate(
-                patient_name=result.appointment.patient_name,
-                document=result.appointment.document,
-                service=result.appointment.service,
-                professional=result.appointment.professional,
-                appointment_date=result.appointment.appointment_date,
-                appointment_time=result.appointment.appointment_time,
+        try:
+            save_appointment(
+                AppointmentCreate(
+                    patient_name=result.appointment.patient_name,
+                    document=result.appointment.document,
+                    service=result.appointment.service,
+                    professional=result.appointment.professional,
+                    appointment_date=result.appointment.appointment_date,
+                    appointment_time=result.appointment.appointment_time,
+                )
             )
-        )
+        except ValueError:
+            retry_result = handle_chat(option_id="agendamento_trocar_horario", current_node=request.current_node)
+            result = FlowResult(
+                current_node=retry_result.current_node,
+                messages=["Esse horário acabou de ser ocupado antes de salvar.", *retry_result.messages],
+                options=retry_result.options,
+                ended=retry_result.ended,
+                map=retry_result.map,
+                image=retry_result.image,
+            )
 
     return serialize(result)
 
@@ -146,9 +158,23 @@ def update_status(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     if not appointment:
-        raise HTTPException(status_code=404, detail="Agendamento nao encontrado.")
+        raise HTTPException(status_code=404, detail="Agendamento não encontrado.")
 
     return serialize_appointment(appointment)
+
+
+@app.delete("/api/appointments/{appointment_id}")
+def delete_appointment_route(
+    appointment_id: int,
+    admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+) -> dict:
+    verify_admin_token(admin_token)
+    was_deleted = delete_appointment(appointment_id)
+
+    if not was_deleted:
+        raise HTTPException(status_code=404, detail="Agendamento não encontrado.")
+
+    return {"deleted": True}
 
 
 def serialize(result: FlowResult) -> ChatResponse:
@@ -168,4 +194,4 @@ def serialize_appointment(appointment: AppointmentRecord) -> AppointmentResponse
 
 def verify_admin_token(admin_token: Optional[str]) -> None:
     if ADMIN_TOKEN and admin_token != ADMIN_TOKEN:
-        raise HTTPException(status_code=401, detail="Codigo de acesso invalido.")
+        raise HTTPException(status_code=401, detail="Código de acesso inválido.")

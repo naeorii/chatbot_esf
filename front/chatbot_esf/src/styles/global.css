@@ -478,7 +478,8 @@ button {
 
 .agenda-chat-link,
 .agenda-primary-button,
-.agenda-secondary-button {
+.agenda-secondary-button,
+.agenda-danger-button {
   min-height: 38px;
   border-radius: 8px;
   padding: 0 14px;
@@ -501,6 +502,24 @@ button {
   border: 1px solid #a8d6c5;
   background: #ffffff;
   color: #0b7466;
+}
+
+.agenda-danger-button {
+  width: 100%;
+  border: 1px solid #f3b0b0;
+  background: #fff5f5;
+  color: #9b1c1c;
+}
+
+.agenda-danger-button:hover:not(:disabled),
+.agenda-danger-button:focus-visible {
+  background: #ffe7e7;
+  outline: none;
+}
+
+.agenda-danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .agenda-toolbar {
@@ -594,7 +613,7 @@ button {
 .agenda-list-header,
 .agenda-row {
   display: grid;
-  grid-template-columns: 130px minmax(180px, 1.3fr) 140px minmax(220px, 1fr) 150px;
+  grid-template-columns: 120px minmax(170px, 1.3fr) 130px minmax(190px, 1fr) 140px 96px;
   gap: 14px;
   align-items: center;
 }
