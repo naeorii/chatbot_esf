@@ -15,7 +15,7 @@ type Appointment = {
   created_at: string
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '')
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000').replace(/\/$/, '')
 const TOKEN_STORAGE_KEY = 'esf-admin-token'
 
 const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [

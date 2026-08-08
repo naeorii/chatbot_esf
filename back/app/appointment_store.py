@@ -105,7 +105,7 @@ def is_slot_booked_on_connection(
         """
         SELECT 1
         FROM appointments
-        WoERE appointment_date = ?
+        WHERE appointment_date = ?
           AND appointment_time = ?
           AND status != 'cancelado'
         LIMIT 1
@@ -114,6 +114,7 @@ def is_slot_booked_on_connection(
     ).fetchone()
 
     return row is not None
+
 
 def list_appointments(
     appointment_date: Optional[str] = None,
