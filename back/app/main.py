@@ -158,11 +158,16 @@ def agenda_session(
 @app.get("/api/appointments", response_model=List[AppointmentResponse])
 def get_appointments(
     appointment_date: Optional[str] = Query(default=None, alias="date"),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     status: Optional[str] = None,
     authorization: Optional[str] = Header(default=None, alias="Authorization"),
 ) -> List[AppointmentResponse]:
     verify_agenda_credentials(authorization)
-    return [serialize_appointment(appointment) for appointment in list_appointments(appointment_date, status)]
+    return [
+        serialize_appointment(appointment)
+        for appointment in list_appointments(appointment_date, status, start_date, end_date)
+    ]
 
 
 @app.patch("/api/appointments/{appointment_id}/status", response_model=AppointmentResponse)

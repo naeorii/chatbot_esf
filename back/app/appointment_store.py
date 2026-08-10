@@ -143,6 +143,8 @@ def is_slot_booked_on_connection(
 def list_appointments(
     appointment_date: Optional[str] = None,
     status: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
 ) -> List[AppointmentRecord]:
     init_db()
     clauses = ["deleted_at IS NULL"]
@@ -151,6 +153,14 @@ def list_appointments(
     if appointment_date:
         clauses.append("appointment_date = ?")
         params.append(appointment_date)
+    else:
+        if start_date:
+            clauses.append("appointment_date >= ?")
+            params.append(start_date)
+
+        if end_date:
+            clauses.append("appointment_date <= ?")
+            params.append(end_date)
 
     if status and status != "todos":
         clauses.append("status = ?")

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agendamentos — Unidade de Saúde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #F5F8F7;
+    --surface: #FFFFFF;
+    --surface-sunken: #EFF4F3;
+    --line: #DCE6E3;
+    --line-soft: #E9F0EE;
+    --ink: #122622;
+    --ink-soft: #4A625C;
+    --ink-faint: #8AA29B;
+    --teal: #0E6B58;
+    --teal-deep: #0A4F41;
+    --teal-tint: #E4F2ED;
+    --blue: #2D7DD2;
+    --blue-tint: #E7F0FC;
+    --amber: #C97A2E;
+    --amber-tint: #FBEEE0;
+    --gray: #6B7C77;
+    --gray-tint: #EEF2F1;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(18,38,34,0.04), 0 6px 20px -8px rgba(18,38,34,0.10);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    padding:28px;
+    min-height:100vh;
+  }
+
+  .wrap{max-width:1240px;margin:0 auto;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:22px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:11px;
+    background:linear-gradient(155deg,var(--teal),var(--teal-deep));
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .brand-mark svg{width:20px;height:20px;}
+  .brand-text h1{
+    font-family:'Sora',sans-serif;
+    font-size:17px;font-weight:700;margin:0;letter-spacing:-0.01em;
+  }
+  .brand-text p{margin:0;font-size:12.5px;color:var(--ink-faint);}
+
+  .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .field{
+    display:flex;align-items:center;gap:8px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 12px;
+    font-size:13.5px;font-weight:500;color:var(--ink);
+  }
+  .field input[type="date"]{
+    border:none;outline:none;background:transparent;
+    font-family:'Inter';font-size:13.5px;font-weight:500;color:var(--ink);
+  }
+  select.field-select{
+    border:none;outline:none;background:transparent;
+    font-family:'Inter';font-size:13.5px;font-weight:500;color:var(--ink);
+    -webkit-appearance:none;appearance:none;padding-right:4px;
+  }
+  .icon-sm{width:15px;height:15px;stroke:var(--ink-faint);flex-shrink:0;}
+
+  .btn{
+    border:1px solid var(--line);
+    background:var(--surface);
+    border-radius:10px;
+    padding:9px 14px;
+    font-family:'Inter';font-size:13.5px;font-weight:600;
+    color:var(--ink-soft);
+    cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+    transition:all .15s ease;
+  }
+  .btn:hover{border-color:var(--teal);color:var(--teal);}
+  .btn-icon{padding:9px;}
+  .btn-primary{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:#fff;
+  }
+  .btn-primary:hover{background:var(--teal-deep);border-color:var(--teal-deep);color:#fff;}
+  .btn.active{background:var(--teal-tint);border-color:var(--teal);color:var(--teal-deep);}
+
+  .seg{
+    display:flex;background:var(--surface-sunken);border-radius:10px;padding:3px;gap:2px;
+    border:1px solid var(--line-soft);
+  }
+  .seg button{
+    border:none;background:transparent;padding:7px 14px;border-radius:8px;
+    font-family:'Inter';font-size:13px;font-weight:600;color:var(--ink-faint);cursor:pointer;
+    transition:all .15s ease;
+  }
+  .seg button.active{background:var(--surface);color:var(--teal-deep);box-shadow:var(--shadow);}
+
+  /* ---------- Stat cards ---------- */
+  .stats{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;
+  }
+  .stat{
+    background:var(--surface);
+    border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    display:flex;flex-direction:column;gap:10px;
+    position:relative;
+    overflow:hidden;
+  }
+  .stat::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:var(--dot,var(--ink-faint));
+  }
+  .stat-label{
+    font-size:12px;font-weight:600;color:var(--ink-faint);
+    text-transform:uppercase;letter-spacing:.05em;
+    display:flex;align-items:center;gap:6px;
+  }
+  .stat-dot{width:7px;height:7px;border-radius:50%;background:var(--dot,var(--ink-faint));}
+  .stat-value{font-family:'Sora',sans-serif;font-size:30px;font-weight:700;letter-spacing:-0.02em;color:var(--ink);}
+  .stat.total{--dot:var(--teal);}
+  .stat.novos{--dot:var(--blue);}
+  .stat.confirmados{--dot:#3EA26B;}
+  .stat.atendidos{--dot:var(--ink-faint);}
+
+  /* ---------- Calendar shell ---------- */
+  .cal{
+    background:var(--surface);
+    border:1px solid var(--line-soft);
+    border-radius:18px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .cal-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px 22px 18px;
+    border-bottom:1px solid var(--line-soft);
+    flex-wrap:wrap;gap:10px;
+  }
+  .cal-head h2{
+    font-family:'Sora',sans-serif;font-size:18px;font-weight:700;margin:0;letter-spacing:-0.01em;
+  }
+  .cal-head .range{color:var(--ink-faint);font-weight:500;font-size:13.5px;margin-left:8px;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);font-weight:500;}
+  .legend-swatch{width:10px;height:10px;border-radius:3px;}
+
+  /* ---------- Week view ---------- */
+  .week-grid{
+    display:grid;
+    grid-template-columns:78px repeat(5,1fr);
+  }
+  .week-grid .corner{
+    border-right:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+    background:var(--surface-sunken);
+  }
+  .day-col-head{
+    padding:14px 10px 12px;
+    text-align:center;
+    border-bottom:1px solid var(--line-soft);
+    border-right:1px solid var(--line-soft);
+    background:var(--surface-sunken);
+  }
+  .day-col-head:last-child{border-right:none;}
+  .day-col-head.is-today{background:var(--teal-tint);}
+  .day-name{
+    font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--ink-faint);text-transform:uppercase;
+  }
+  .day-col-head.is-today .day-name{color:var(--teal-deep);}
+  .day-num{
+    font-family:'Sora',sans-serif;font-size:19px;font-weight:700;margin-top:2px;color:var(--ink);
+  }
+  .day-col-head.is-today .day-num{color:var(--teal-deep);}
+  .day-badge{
+    display:inline-block;margin-top:6px;
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:20px;padding:2px 9px;
+    font-size:11px;font-weight:700;color:var(--ink-soft);
+  }
+  .day-badge.has{background:var(--teal);border-color:var(--teal);color:#fff;}
+
+  .time-label{
+    padding:16px 10px;
+    text-align:right;
+    border-right:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+    background:var(--surface-sunken);
+  }
+  .time-label .t{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;color:var(--ink-soft);}
+  .time-label .p{display:block;font-size:10.5px;color:var(--ink-faint);margin-top:1px;}
+
+  .slot{
+    border-right:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+    padding:8px;
+    min-height:96px;
+    position:relative;
+  }
+  .slot:last-child{border-right:none;}
+
+  .slot-empty{
+    height:100%;
+    border:1.5px dashed var(--line);
+    border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-faint);
+    font-size:12.5px;font-weight:600;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .slot-empty:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-tint);}
+  .slot-empty svg{width:13px;height:13px;margin-right:5px;stroke:currentColor;}
+
+  .slot-closed{
+    height:100%;border-radius:10px;
+    background:repeating-linear-gradient(135deg, var(--amber-tint), var(--amber-tint) 8px, #F7E4CC 8px, #F7E4CC 16px);
+    border:1px solid #EAD2AE;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--amber);font-size:12px;font-weight:700;text-align:center;padding:6px;
+  }
+
+  .appt{
+    height:100%;border-radius:10px;
+    padding:10px 11px;
+    background:var(--blue-tint);
+    border:1px solid #C7DEF6;
+    border-left:3px solid var(--blue);
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+    display:flex;flex-direction:column;gap:5px;
+  }
+  .appt:hover{transform:translateY(-1px);box-shadow:0 6px 16px -6px rgba(45,125,210,0.35);}
+  .appt.confirmado{
+    background:#E7F5EC;border-color:#C3E7CE;border-left-color:#3EA26B;
+  }
+  .appt.atendido{
+    background:var(--gray-tint);border-color:var(--line);border-left-color:var(--gray);
+  }
+  .appt-name{font-size:13px;font-weight:700;color:var(--ink);line-height:1.15;}
+  .appt-role{font-size:11.5px;color:var(--ink-soft);font-weight:500;}
+  .appt-tag{
+    align-self:flex-start;
+    font-size:10px;font-weight:700;letter-spacing:.02em;
+    padding:2px 7px;border-radius:20px;
+    background:var(--blue);color:#fff;
+    text-transform:uppercase;
+  }
+  .appt.confirmado .appt-tag{background:#3EA26B;}
+  .appt.atendido .appt-tag{background:var(--gray);}
+
+  /* ---------- Month view ---------- */
+  .month-wrap{display:none;}
+  .month-grid{
+    display:grid;grid-template-columns:repeat(7,1fr);
+  }
+  .month-dow{
+    padding:12px 0;text-align:center;
+    font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--ink-faint);text-transform:uppercase;
+    background:var(--surface-sunken);
+    border-bottom:1px solid var(--line-soft);
+    border-right:1px solid var(--line-soft);
+  }
+  .month-dow:last-child{border-right:none;}
+  .month-cell{
+    min-height:104px;
+    border-right:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+    padding:8px;
+    display:flex;flex-direction:column;gap:6px;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .month-cell:hover{background:var(--surface-sunken);}
+  .month-cell:nth-child(7n){border-right:none;}
+  .month-cell.muted{color:var(--ink-faint);background:#FBFCFC;}
+  .month-cell.today{background:var(--teal-tint);}
+  .month-cell .mnum{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--ink-soft);}
+  .month-cell.today .mnum{color:var(--teal-deep);font-weight:700;}
+  .month-pills{display:flex;flex-direction:column;gap:3px;}
+  .month-pill{
+    font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:5px;
+    background:var(--blue-tint);color:var(--blue);
+    border-left:2px solid var(--blue);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .month-pill.confirmado{background:#E7F5EC;color:#2E7D4F;border-left-color:#3EA26B;}
+  .month-pill.closed{background:var(--amber-tint);color:var(--amber);border-left-color:var(--amber);}
+  .month-more{font-size:10.5px;color:var(--ink-faint);font-weight:600;padding-left:2px;}
+
+  @media (max-width: 880px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .week-grid{grid-template-columns:56px repeat(5,minmax(120px,1fr));overflow-x:auto;}
+    .cal{overflow-x:auto;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M9 16l2 2 4-4"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>Agendamentos</h1>
+        <p>Unidade de Saúde — Painel da recepção</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="field">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <input type="date" value="2026-08-10">
+      </div>
+      <div class="field">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+        <select class="field-select">
+          <option>Todos os profissionais</option>
+          <option>Dentista</option>
+          <option>Clínico geral</option>
+          <option>Enfermagem</option>
+        </select>
+      </div>
+      <div class="seg">
+        <button class="active" id="btnWeek">Semana</button>
+        <button id="btnMonth">Mês</button>
+      </div>
+      <button class="btn btn-icon" title="Semana anterior">
+        <svg class="icon-sm" style="stroke:var(--ink-soft)" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="btn">Hoje</button>
+      <button class="btn btn-icon" title="Próxima semana">
+        <svg class="icon-sm" style="stroke:var(--ink-soft)" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <button class="btn btn-primary">
+        <svg class="icon-sm" style="stroke:#fff" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+        Atualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat total">
+      <div class="stat-label"><span class="stat-dot"></span>Total da semana</div>
+      <div class="stat-value">3</div>
+    </div>
+    <div class="stat novos">
+      <div class="stat-label"><span class="stat-dot"></span>Novos</div>
+      <div class="stat-value">3</div>
+    </div>
+    <div class="stat confirmados">
+      <div class="stat-label"><span class="stat-dot"></span>Confirmados</div>
+      <div class="stat-value">0</div>
+    </div>
+    <div class="stat atendidos">
+      <div class="stat-label"><span class="stat-dot"></span>Atendidos</div>
+      <div class="stat-value">0</div>
+    </div>
+  </div>
+
+  <!-- Calendar -->
+  <div class="cal">
+    <div class="cal-head">
+      <div>
+        <h2>Calendário semanal<span class="range">10/08 a 14/08 · 3 agendamentos</span></h2>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--blue)"></span>Novo</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#3EA26B"></span>Confirmado</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--gray)"></span>Atendido</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--amber)"></span>Sem atendimento</div>
+      </div>
+    </div>
+
+    <!-- Week view -->
+    <div class="week-wrap">
+      <div class="week-grid">
+        <div class="corner"></div>
+        <div class="day-col-head is-today">
+          <div class="day-name">Segunda</div>
+          <div class="day-num">10/08</div>
+          <div class="day-badge has">1 agend.</div>
+        </div>
+        <div class="day-col-head">
+          <div class="day-name">Terça</div>
+          <div class="day-num">11/08</div>
+          <div class="day-badge has">1 agend.</div>
+        </div>
+        <div class="day-col-head">
+          <div class="day-name">Quarta</div>
+          <div class="day-num">12/08</div>
+          <div class="day-badge">0 agend.</div>
+        </div>
+        <div class="day-col-head">
+          <div class="day-name">Quinta</div>
+          <div class="day-num">13/08</div>
+          <div class="day-badge">0 agend.</div>
+        </div>
+        <div class="day-col-head">
+          <div class="day-name">Sexta</div>
+          <div class="day-num">14/08</div>
+          <div class="day-badge">0 agend.</div>
+        </div>
+
+        <!-- 10:00 row -->
+        <div class="time-label"><span class="t">10:00</span><span class="p">Manhã</span></div>
+        <div class="slot"><div class="slot-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Livre</div></div>
+        <div class="slot"><div class="slot-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Livre</div></div>
+        <div class="slot"><div class="slot-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Livre</div></div>
+        <div class="slot"><div class="slot-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Livre</div></div>
+        <div class="slot"><div class="slot-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Livre</div></div>
+
+        <!-- 14:00 row -->
+        <div class="time-label"><span class="t">14:00</span><span class="p">Tarde</span></div>
+        <div class="slot">
+          <div class="appt">
+            <div class="appt-name">Tai Santos</div>
+            <div class="appt-role">Dentista</div>
+            <div class="appt-tag">Novo</div>
+          </div>
+        </div>
+        <div class="slot">
+          <div class="appt">
+            <div class="appt-name">Taiana Santos</div>
+            <div class="appt-role">Dentista</div>
+            <div class="appt-tag">Novo</div>
+          </div>
+        </div>
+        <div class="slot"><div class="slot-closed">Sem atendimento</div></div>
+        <div class="slot"><div class="slot-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Livre</div></div>
+        <div class="slot"><div class="slot-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Livre</div></div>
+      </div>
+    </div>
+
+    <!-- Month view -->
+    <div class="month-wrap">
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const btnWeek = document.getElementById('btnWeek');
+  const btnMonth = document.getElementById('btnMonth');
+  const weekWrap = document.querySelector('.week-wrap');
+  const monthWrap = document.querySelector('.month-wrap');
+  const calTitle = document.querySelector('.cal-head h2');
+
+  btnWeek.addEventListener('click', () => {
+    btnWeek.classList.add('active'); btnMonth.classList.remove('active');
+    weekWrap.style.display = 'block'; monthWrap.style.display = 'none';
+    calTitle.innerHTML = 'Calendário semanal<span class="range">10/08 a 14/08 · 3 agendamentos</span>';
+  });
+  btnMonth.addEventListener('click', () => {
+    btnMonth.classList.add('active'); btnWeek.classList.remove('active');
+    weekWrap.style.display = 'none'; monthWrap.style.display = 'block';
+    calTitle.innerHTML = 'Calendário mensal<span class="range">Agosto de 2026 · 6 agendamentos</span>';
+  });
+
+  // Build a simple August 2026 month grid (Sun-Sat), with sample data
+  const dows = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+  const grid = document.getElementById('monthGrid');
+  dows.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'month-dow';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  // Aug 1 2026 is a Saturday -> offset 6 leading blanks from July
+  const daysInMonth = 31;
+  const leading = 6; // blanks before day 1
+  const julyDays = 31;
+  const sampleAppts = {
+    10: [{n:'Tai Santos', c:'novo'}],
+    11: [{n:'Taiana Santos', c:'novo'}],
+    12: [{n:'Sem atendimento', c:'closed'}],
+    17: [{n:'Marcos Lima', c:'confirmado'}],
+    24: [{n:'Beatriz Melo', c:'confirmado'}, {n:'João Prado', c:'novo'}],
+  };
+  const totalCells = 42;
+  for (let i = 0; i < totalCells; i++) {
+    const cell = document.createElement('div');
+    let dayNum, muted = false;
+    if (i < leading) {
+      dayNum = julyDays - leading + i + 1; muted = true;
+    } else if (i < leading + daysInMonth) {
+      dayNum = i - leading + 1;
+    } else {
+      dayNum = i - leading - daysInMonth + 1; muted = true;
+    }
+    cell.className = 'month-cell' + (muted ? ' muted' : '') + (!muted && dayNum === 10 ? ' today' : '');
+    const numEl = document.createElement('div');
+    numEl.className = 'mnum';
+    numEl.textContent = String(dayNum).padStart(2,'0');
+    cell.appendChild(numEl);
+
+    if (!muted && sampleAppts[dayNum]) {
+      const pillsWrap = document.createElement('div');
+      pillsWrap.className = 'month-pills';
+      sampleAppts[dayNum].slice(0,2).forEach(a => {
+        const pill = document.createElement('div');
+        pill.className = 'month-pill ' + a.c;
+        pill.textContent = a.n;
+        pillsWrap.appendChild(pill);
+      });
+      if (sampleAppts[dayNum].length > 2) {
+        const more = document.createElement('div');
+        more.className = 'month-more';
+        more.textContent = '+' + (sampleAppts[dayNum].length - 2) + ' mais';
+        pillsWrap.appendChild(more);
+      }
+      cell.appendChild(pillsWrap);
+    }
+    grid.appendChild(cell);
+  }
+</script>
+</body>
+</html>
