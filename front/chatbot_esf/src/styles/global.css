@@ -893,7 +893,7 @@ button {
 }
 
 .agenda-legend-closed {
-  background: var(--agenda-amber);
+  background: var(--agenda-gray);
 }
 
 .agenda-week-scroll {
@@ -1058,16 +1058,16 @@ button {
 
 .agenda-slot-closed {
   min-height: 96px;
-  border: 1px solid #ead2ae;
+  border: 1px solid var(--agenda-line);
   border-radius: 10px;
   background: repeating-linear-gradient(
     135deg,
-    var(--agenda-amber-tint),
-    var(--agenda-amber-tint) 8px,
-    #f7e4cc 8px,
-    #f7e4cc 16px
+    var(--agenda-gray-tint),
+    var(--agenda-gray-tint) 8px,
+    #e4ebe9 8px,
+    #e4ebe9 16px
   );
-  color: var(--agenda-amber);
+  color: var(--agenda-gray);
   display: flex;
   align-items: center;
   justify-content: center;
