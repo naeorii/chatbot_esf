@@ -52,6 +52,7 @@ function Agenda() {
   const [authToken, setAuthToken] = useState(() => sessionStorage.getItem(AUTH_STORAGE_KEY) ?? '')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
@@ -332,12 +333,21 @@ function Agenda() {
 
             <label>
               Senha
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
+              <span className="agenda-password-field">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  onClick={() => setShowPassword((currentValue) => !currentValue)}
+                >
+                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </span>
             </label>
 
             {error && <p className="agenda-error">{error}</p>}
@@ -642,7 +652,7 @@ function Agenda() {
                 </div>
                 <div>
                   <dt>Profissional</dt>
-                  <dd>{selectedAppointment.professional}</dd>
+                  <dd>{displayProfessionalName(selectedAppointment)}</dd>
                 </div>
               </dl>
 
@@ -787,6 +797,31 @@ function statusLabel(status: AppointmentStatus) {
 
 function appointmentCountLabel(total: number) {
   return total === 1 ? '1 agendamento' : `${total} agendamentos`
+}
+
+function displayProfessionalName(appointment: Appointment) {
+  const searchableValue = normalizeSearchText(`${appointment.service} ${appointment.professional}`)
+
+  if (searchableValue.includes('dentista')) {
+    return 'Dentista Sabrina'
+  }
+
+  if (searchableValue.includes('enfermagem')) {
+    return 'Enfermeira Denise Vedootto, Enfermeira Residente em Obstetrícia Anny, Técnica de Enfermagem Mariana'
+  }
+
+  if (searchableValue.includes('medico')) {
+    return 'Dra. Cátia Augusta'
+  }
+
+  return appointment.professional
+}
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 }
 
 function appointmentSlotKey(date: string, time: string) {

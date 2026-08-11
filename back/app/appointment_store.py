@@ -282,8 +282,4 @@ def record_from_row(row: sqlite3.Row) -> AppointmentRecord:
 
 
 def mask_document(document: str) -> str:
-    cleaned = "".join(char for char in document if char.isalnum())
-    if len(cleaned) <= 4:
-        return "****"
-
-    return f"{'*' * (len(cleaned) - 4)}{cleaned[-4:]}"
+    return document

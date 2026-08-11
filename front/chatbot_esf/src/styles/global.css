@@ -531,9 +531,54 @@ button {
   outline: none;
 }
 
+.agenda-password-field {
+  min-height: 40px;
+  border: 1px solid var(--agenda-line);
+  border-radius: 10px;
+  background: var(--agenda-surface);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.agenda-password-field input {
+  min-height: 38px;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  padding-right: 8px;
+}
+
+.agenda-password-field button {
+  min-height: 30px;
+  border-left: 1px solid var(--agenda-line-soft);
+  background: transparent;
+  color: var(--agenda-teal);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 10px;
+}
+
+.agenda-password-field:focus-within {
+  border-color: var(--agenda-teal);
+  box-shadow: 0 0 0 3px rgba(14, 107, 88, 0.12);
+}
+
+.agenda-password-field button:hover,
+.agenda-password-field button:focus-visible {
+  background: var(--agenda-teal-tint);
+  outline: none;
+}
+
 .agenda-login-form input:focus {
   border-color: var(--agenda-teal);
   box-shadow: 0 0 0 3px rgba(14, 107, 88, 0.12);
+}
+
+.agenda-password-field input:focus {
+  box-shadow: none;
 }
 
 .agenda-header {
