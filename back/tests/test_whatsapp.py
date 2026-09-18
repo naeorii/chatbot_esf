@@ -54,6 +54,14 @@ class WhatsAppIntegrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.text, "12345")
 
+    def test_required_public_pages_are_available(self) -> None:
+        client = TestClient(app)
+
+        for path in ("/politica-de-privacidade", "/exclusao-de-dados", "/termos-de-uso"):
+            response = client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("ESF São Carlos/Urlândia", response.text)
+
     def test_signature_validation(self) -> None:
         body = b'{"object":"whatsapp_business_account"}'
         digest = hmac.new(b"app-secret-test", body, hashlib.sha256).hexdigest()

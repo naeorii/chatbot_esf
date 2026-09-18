@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.appointment_store import (
@@ -20,6 +20,7 @@ from app.appointment_store import (
     update_appointment_status,
 )
 from app.chat_flow import FlowResult, handle_chat, start_response
+from app.legal_pages import data_deletion_html, privacy_policy_html, terms_html
 from app.whatsapp import (
     process_webhook_payload,
     verify_webhook_signature,
@@ -114,6 +115,21 @@ def root() -> dict:
         "service": "ESF Assistente API",
         "health": "/health",
     }
+
+
+@app.get("/politica-de-privacidade", response_class=HTMLResponse, include_in_schema=False)
+def privacy_policy() -> HTMLResponse:
+    return HTMLResponse(privacy_policy_html())
+
+
+@app.get("/exclusao-de-dados", response_class=HTMLResponse, include_in_schema=False)
+def data_deletion() -> HTMLResponse:
+    return HTMLResponse(data_deletion_html())
+
+
+@app.get("/termos-de-uso", response_class=HTMLResponse, include_in_schema=False)
+def terms_of_use() -> HTMLResponse:
+    return HTMLResponse(terms_html())
 
 
 @app.get("/templates/mapaAreas.jpeg", include_in_schema=False)

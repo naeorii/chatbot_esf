@@ -103,7 +103,7 @@ def save_appointment(appointment: AppointmentCreate) -> int:
             """,
             (
                 appointment.patient_name,
-                appointment.document,
+                mask_document(appointment.document),
                 appointment.service,
                 appointment.professional,
                 appointment.appointment_date,
@@ -282,6 +282,8 @@ def record_from_row(row: sqlite3.Row) -> AppointmentRecord:
 
 
 def mask_document(document: str) -> str:
+    if "*" in document:
+        return document
     compact = "".join(character for character in document if character.isalnum())
     if len(compact) <= 4:
         return "*" * len(compact)

@@ -16,6 +16,9 @@ Endpoints principais:
 - `POST /api/chat`
 - `GET /webhooks/whatsapp` - verificação do webhook pela Meta
 - `POST /webhooks/whatsapp` - recebimento de mensagens do WhatsApp
+- `GET /politica-de-privacidade` - política pública exigida pela Meta
+- `GET /exclusao-de-dados` - instruções públicas para solicitações de exclusão
+- `GET /termos-de-uso` - termos públicos do assistente
 
 ## WhatsApp Cloud API
 
