@@ -3,6 +3,8 @@ __pycache__/
 
 back/data/*.sqlite3
 back/data/*.sqlite3-*
+back/.env
+.env
 
 front/chatbot_esf/dist/
 front/chatbot_esf/vite-dev*.log

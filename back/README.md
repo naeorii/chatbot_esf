@@ -14,6 +14,23 @@ Endpoints principais:
 - `GET /health`
 - `GET /api/chat/start`
 - `POST /api/chat`
+- `GET /webhooks/whatsapp` - verificação do webhook pela Meta
+- `POST /webhooks/whatsapp` - recebimento de mensagens do WhatsApp
+
+## WhatsApp Cloud API
+
+O webhook usa o mesmo fluxo de conversa da simulação React. Configure as variáveis de
+`.env.example` no ambiente de produção, sem salvar tokens ou segredos no repositório.
+
+- `META_VERIFY_TOKEN`: segredo definido por você e repetido no painel da Meta.
+- `META_APP_SECRET`: chave secreta do app usada para validar a assinatura do webhook.
+- `META_WHATSAPP_TOKEN`: token de acesso do usuário do sistema.
+- `META_PHONE_NUMBER_ID`: identificador do número remetente no WhatsApp.
+- `PUBLIC_BASE_URL`: URL HTTPS pública deste backend, sem barra no final.
+- `META_GRAPH_API_VERSION`: versão da Graph API; o padrão atual do projeto é `v25.0`.
+
+O serviço responde menus interativos, mantém o estado da conversa no SQLite e impede o
+processamento duplicado do mesmo ID de mensagem.
 ## Banco de agendamentos
 
 Localmente, os agendamentos ficam em `back/data/agendamentos.sqlite3`.

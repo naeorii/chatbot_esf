@@ -2,12 +2,13 @@ import base64
 import binascii
 import hmac
 import os
+import secrets
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from app.appointment_store import (
@@ -19,6 +20,11 @@ from app.appointment_store import (
     update_appointment_status,
 )
 from app.chat_flow import FlowResult, handle_chat, start_response
+from app.whatsapp import (
+    process_webhook_payload,
+    verify_webhook_signature,
+    whatsapp_is_configured,
+)
 
 
 class ChatOption(BaseModel):
@@ -98,7 +104,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "whatsapp_configured": whatsapp_is_configured()}
 
 
 @app.get("/")
@@ -147,6 +153,42 @@ def chat(request: ChatRequest) -> ChatResponse:
             )
 
     return serialize(result)
+
+
+@app.get("/webhooks/whatsapp", response_class=PlainTextResponse)
+def verify_whatsapp_webhook(
+    hub_mode: str = Query(alias="hub.mode"),
+    hub_verify_token: str = Query(alias="hub.verify_token"),
+    hub_challenge: str = Query(alias="hub.challenge"),
+) -> PlainTextResponse:
+    expected_token = os.getenv("META_VERIFY_TOKEN")
+    if (
+        hub_mode != "subscribe"
+        or not expected_token
+        or not secrets.compare_digest(hub_verify_token, expected_token)
+    ):
+        raise HTTPException(status_code=403, detail="Falha na verificação do webhook.")
+
+    return PlainTextResponse(hub_challenge)
+
+
+@app.post("/webhooks/whatsapp")
+async def receive_whatsapp_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    x_hub_signature_256: Optional[str] = Header(default=None, alias="X-Hub-Signature-256"),
+) -> dict:
+    raw_body = await request.body()
+    if not verify_webhook_signature(raw_body, x_hub_signature_256):
+        raise HTTPException(status_code=403, detail="Assinatura do webhook inválida.")
+
+    try:
+        payload = await request.json()
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="JSON inválido.") from error
+
+    background_tasks.add_task(process_webhook_payload, payload)
+    return {"status": "accepted"}
 
 @app.get("/api/agenda/session")
 def agenda_session(
