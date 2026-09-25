@@ -5,6 +5,7 @@ import os
 import secrets
 from pathlib import Path
 from typing import List, Optional
+from urllib.parse import parse_qs
 
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,7 @@ from app.appointment_store import (
 )
 from app.chat_flow import FlowResult, handle_chat, start_response
 from app.legal_pages import data_deletion_html, privacy_policy_html, terms_html
+from app.meta_data_deletion import confirmation_code, decode_signed_request
 from app.whatsapp import (
     process_webhook_payload,
     verify_webhook_signature,
@@ -125,6 +127,34 @@ def privacy_policy() -> HTMLResponse:
 @app.get("/exclusao-de-dados", response_class=HTMLResponse, include_in_schema=False)
 def data_deletion() -> HTMLResponse:
     return HTMLResponse(data_deletion_html())
+
+
+@app.post("/webhooks/meta/data-deletion", include_in_schema=False)
+async def meta_data_deletion(request: Request) -> dict:
+    app_secret = os.getenv("META_APP_SECRET")
+    if not app_secret:
+        raise HTTPException(status_code=503, detail="Meta integration is not configured")
+
+    form = parse_qs((await request.body()).decode("utf-8"))
+    signed_request = form.get("signed_request", [None])[0]
+    if not signed_request:
+        raise HTTPException(status_code=400, detail="Missing signed_request")
+
+    try:
+        payload = decode_signed_request(signed_request, app_secret)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    user_id = str(payload.get("user_id") or "")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing user_id")
+
+    code = confirmation_code(user_id, app_secret)
+    public_base_url = os.getenv("PUBLIC_BASE_URL", str(request.base_url)).rstrip("/")
+    return {
+        "url": f"{public_base_url}/exclusao-de-dados?codigo={code}",
+        "confirmation_code": code,
+    }
 
 
 @app.get("/termos-de-uso", response_class=HTMLResponse, include_in_schema=False)

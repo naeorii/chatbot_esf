@@ -1,6 +1,8 @@
 import asyncio
+import base64
 import hashlib
 import hmac
+import json
 import os
 import tempfile
 import unittest
@@ -61,6 +63,31 @@ class WhatsAppIntegrationTests(unittest.TestCase):
             response = client.get(path)
             self.assertEqual(response.status_code, 200)
             self.assertIn("ESF São Carlos/Urlândia", response.text)
+
+    def test_meta_data_deletion_callback(self) -> None:
+        client = TestClient(app)
+        payload = _urlsafe_b64encode(json.dumps({"user_id": "meta-user-1"}).encode("utf-8"))
+        signature = _urlsafe_b64encode(
+            hmac.new(b"app-secret-test", payload.encode("utf-8"), hashlib.sha256).digest()
+        )
+
+        response = client.post(
+            "/webhooks/meta/data-deletion",
+            data={"signed_request": f"{signature}.{payload}"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("confirmation_code", response.json())
+        self.assertIn("/exclusao-de-dados?codigo=", response.json()["url"])
+
+    def test_meta_data_deletion_rejects_invalid_signature(self) -> None:
+        client = TestClient(app)
+        response = client.post(
+            "/webhooks/meta/data-deletion",
+            data={"signed_request": "invalid.payload"},
+        )
+
+        self.assertEqual(response.status_code, 400)
 
     def test_signature_validation(self) -> None:
         body = b'{"object":"whatsapp_business_account"}'
@@ -124,6 +151,10 @@ def webhook_payload(message: dict) -> dict:
         "object": "whatsapp_business_account",
         "entry": [{"changes": [{"value": {"messages": [message]}}]}],
     }
+
+
+def _urlsafe_b64encode(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
 
 
 if __name__ == "__main__":
