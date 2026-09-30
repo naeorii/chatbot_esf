@@ -12,6 +12,13 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from app import appointment_store
+from app.appointment_store import (
+    AppointmentCreate,
+    delete_appointment,
+    list_appointments,
+    save_appointment,
+    update_appointment_status,
+)
 from app.main import app
 from app.whatsapp import (
     compact_title,
@@ -33,6 +40,7 @@ class WhatsAppIntegrationTests(unittest.TestCase):
                 "META_APP_SECRET": "app-secret-test",
                 "META_WHATSAPP_TOKEN": "token-test",
                 "META_PHONE_NUMBER_ID": "phone-id-test",
+                "DATABASE_URL": "",
             },
             clear=False,
         )
@@ -138,6 +146,31 @@ class WhatsAppIntegrationTests(unittest.TestCase):
         mark_read.assert_awaited_once_with("wamid.once")
         send_result.assert_awaited_once()
         self.assertEqual(get_session("5551999999999"), "inicio")
+
+    def test_appointment_storage_uses_sqlite_as_local_fallback(self) -> None:
+        appointment_id = save_appointment(
+            AppointmentCreate(
+                patient_name="Paciente Teste",
+                document="12345678900",
+                service="Enfermagem",
+                professional="Equipe de enfermagem",
+                appointment_date="2026-10-05",
+                appointment_time="10:00",
+            )
+        )
+
+        appointments = list_appointments(start_date="2026-10-05", end_date="2026-10-09")
+        self.assertEqual(len(appointments), 1)
+        self.assertEqual(appointments[0].id, appointment_id)
+        self.assertEqual(appointments[0].document_masked, "*******8900")
+        self.assertEqual(appointments[0].appointment_time, "10:00")
+
+        updated = update_appointment_status(appointment_id, "confirmado")
+        self.assertIsNotNone(updated)
+        self.assertEqual(updated.status, "confirmado")
+
+        self.assertTrue(delete_appointment(appointment_id))
+        self.assertEqual(list_appointments(), [])
 
     def test_compacts_long_menu_titles(self) -> None:
         title = compact_title("Curativos e testes rápidos")

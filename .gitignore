@@ -3,6 +3,7 @@ __pycache__/
 
 back/data/*.sqlite3
 back/data/*.sqlite3-*
+back/neon_migration.sql
 back/.env
 .env
 

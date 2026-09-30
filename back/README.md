@@ -38,7 +38,13 @@ processamento duplicado do mesmo ID de mensagem.
 
 Localmente, os agendamentos ficam em `back/data/agendamentos.sqlite3`.
 
-Em produção, configure um disco persistente no Render e defina uma destas variáveis de ambiente:
+Em produção, prefira PostgreSQL e defina a string de conexão fornecida pelo Neon:
+
+- `DATABASE_URL=postgresql://...`
+
+O backend usa PostgreSQL automaticamente quando essa variável está presente. Para desenvolvimento
+local, ele continua usando SQLite. Como alternativa, em um plano pago do Render, configure um disco
+persistente e defina uma destas variáveis:
 
 - `APPOINTMENTS_DB_PATH=/var/data/agendamentos.sqlite3`
 - ou `APPOINTMENTS_DATA_DIR=/var/data`

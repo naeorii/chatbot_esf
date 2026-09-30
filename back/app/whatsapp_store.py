@@ -2,26 +2,29 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.appointment_store import connect, init_db
+from app.appointment_store import connect, execute, init_db, is_postgres_connection
 
 
 def init_whatsapp_store() -> None:
     init_db()
     with connect() as connection:
-        connection.execute(
-            """
+        timestamp_type = "TIMESTAMPTZ" if is_postgres_connection(connection) else "TEXT"
+        execute(
+            connection,
+            f"""
             CREATE TABLE IF NOT EXISTS whatsapp_sessions (
                 contact_hash TEXT PRIMARY KEY,
                 current_node TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                updated_at {timestamp_type} NOT NULL
             )
             """
         )
-        connection.execute(
-            """
+        execute(
+            connection,
+            f"""
             CREATE TABLE IF NOT EXISTS whatsapp_messages (
                 message_id TEXT PRIMARY KEY,
-                received_at TEXT NOT NULL
+                received_at {timestamp_type} NOT NULL
             )
             """
         )
@@ -34,7 +37,8 @@ def contact_key(phone_number: str) -> str:
 def get_session(phone_number: str) -> Optional[str]:
     init_whatsapp_store()
     with connect() as connection:
-        row = connection.execute(
+        row = execute(
+            connection,
             "SELECT current_node FROM whatsapp_sessions WHERE contact_hash = ?",
             (contact_key(phone_number),),
         ).fetchone()
@@ -46,7 +50,8 @@ def save_session(phone_number: str, current_node: str) -> None:
     init_whatsapp_store()
     updated_at = datetime.now(timezone.utc).isoformat()
     with connect() as connection:
-        connection.execute(
+        execute(
+            connection,
             """
             INSERT INTO whatsapp_sessions (contact_hash, current_node, updated_at)
             VALUES (?, ?, ?)
@@ -62,10 +67,12 @@ def claim_message(message_id: str) -> bool:
     init_whatsapp_store()
     received_at = datetime.now(timezone.utc).isoformat()
     with connect() as connection:
-        cursor = connection.execute(
+        cursor = execute(
+            connection,
             """
-            INSERT OR IGNORE INTO whatsapp_messages (message_id, received_at)
+            INSERT INTO whatsapp_messages (message_id, received_at)
             VALUES (?, ?)
+            ON CONFLICT(message_id) DO NOTHING
             """,
             (message_id, received_at),
         )
@@ -76,7 +83,8 @@ def claim_message(message_id: str) -> bool:
 def release_message(message_id: str) -> None:
     init_whatsapp_store()
     with connect() as connection:
-        connection.execute(
+        execute(
+            connection,
             "DELETE FROM whatsapp_messages WHERE message_id = ?",
             (message_id,),
         )
