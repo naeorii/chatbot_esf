@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import httpx
 
 from app.appointment_store import AppointmentCreate, save_appointment
-from app.chat_flow import FlowOption, FlowResult, handle_chat
+from app.chat_flow import START_NODE, FlowOption, FlowResult, handle_chat
 from app.whatsapp_store import claim_message, get_session, release_message, save_session
 
 
@@ -153,7 +153,12 @@ def persist_appointment(result: FlowResult, current_node: Optional[str]) -> Flow
 async def send_flow_result(recipient: str, result: FlowResult) -> None:
     body = "\n\n".join(result.messages)
     if result.options:
-        await send_options(recipient, body, result.options)
+        await send_options(
+            recipient,
+            body,
+            result.options,
+            use_buttons=result.current_node == START_NODE,
+        )
     elif body:
         await send_text(recipient, body)
 
@@ -172,21 +177,21 @@ async def send_flow_result(recipient: str, result: FlowResult) -> None:
             await send_image(recipient, image_url, result.image.caption or result.image.alt)
 
 
-async def send_options(recipient: str, body: str, options: Iterable[FlowOption]) -> None:
+async def send_options(
+    recipient: str,
+    body: str,
+    options: Iterable[FlowOption],
+    use_buttons: bool = False,
+) -> None:
     option_list = list(options)
     if not option_list:
         await send_text(recipient, body)
         return
 
-    # O WhatsApp permite no máximo três botões de resposta por mensagem.
-    # Dividimos menus maiores em blocos para manter todas as opções visíveis
-    # diretamente na conversa, sem abrir o antigo pop-up "Ver opções".
-    for start_index in range(0, len(option_list), 3):
-        option_group = option_list[start_index : start_index + 3]
-        group_body = body if start_index == 0 else "Mais opções:"
+    if use_buttons:
         interactive = {
             "type": "button",
-            "body": {"text": group_body[:1024]},
+            "body": {"text": body[:1024]},
             "action": {
                 "buttons": [
                     {
@@ -196,11 +201,42 @@ async def send_options(recipient: str, body: str, options: Iterable[FlowOption])
                             "title": compact_button_title(option.label),
                         },
                     }
-                    for option in option_group
+                    for option in option_list[:3]
                 ]
             },
         }
+        await graph_request(
+            {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": recipient,
+                "type": "interactive",
+                "interactive": interactive,
+            }
+        )
+        return
 
+    # Listas do WhatsApp aceitam até dez opções. Caso um submenu ultrapasse
+    # esse limite, enviamos listas adicionais sem descartar nenhuma opção.
+    for start_index in range(0, len(option_list), 10):
+        option_group = option_list[start_index : start_index + 10]
+        group_body = body if start_index == 0 else "Mais opções disponíveis:"
+        interactive = {
+            "type": "list",
+            "body": {"text": group_body[:1024]},
+            "action": {
+                "button": "Ver opções",
+                "sections": [
+                    {
+                        "title": "Atendimento",
+                        "rows": [
+                            {"id": option.id, "title": compact_title(option.label)}
+                            for option in option_group
+                        ],
+                    }
+                ],
+            },
+        }
         await graph_request(
             {
                 "messaging_product": "whatsapp",

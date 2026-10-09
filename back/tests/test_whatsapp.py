@@ -181,7 +181,7 @@ class WhatsAppIntegrationTests(unittest.TestCase):
         self.assertLessEqual(len(title), 24)
         self.assertTrue(title.endswith("…"))
 
-    def test_sends_large_menus_as_inline_button_groups(self) -> None:
+    def test_sends_submenus_as_list(self) -> None:
         options = [
             SimpleNamespace(id=f"opcao-{index}", label=f"Opção de atendimento {index}")
             for index in range(1, 6)
@@ -190,19 +190,39 @@ class WhatsAppIntegrationTests(unittest.TestCase):
         with patch("app.whatsapp.graph_request", new_callable=AsyncMock) as graph_request:
             asyncio.run(send_options("5551999999999", "Escolha uma opção:", options))
 
-        self.assertEqual(graph_request.await_count, 2)
-        payloads = [call.args[0] for call in graph_request.await_args_list]
-        self.assertEqual(payloads[0]["interactive"]["body"]["text"], "Escolha uma opção:")
-        self.assertEqual(payloads[1]["interactive"]["body"]["text"], "Mais opções:")
-        self.assertTrue(all(payload["interactive"]["type"] == "button" for payload in payloads))
+        graph_request.assert_awaited_once()
+        payload = graph_request.await_args.args[0]
+        self.assertEqual(payload["interactive"]["type"], "list")
+        self.assertEqual(payload["interactive"]["action"]["button"], "Ver opções")
+        self.assertEqual(len(payload["interactive"]["action"]["sections"][0]["rows"]), 5)
+
+    def test_sends_main_menu_as_inline_buttons(self) -> None:
+        options = [
+            SimpleNamespace(id="informacoes", label="Informações"),
+            SimpleNamespace(id="horario", label="Horário de funcionamento"),
+            SimpleNamespace(id="agendamento", label="Agendamento"),
+        ]
+
+        with patch("app.whatsapp.graph_request", new_callable=AsyncMock) as graph_request:
+            asyncio.run(
+                send_options(
+                    "5551999999999",
+                    "Escolha uma opção:",
+                    options,
+                    use_buttons=True,
+                )
+            )
+
+        graph_request.assert_awaited_once()
+        payload = graph_request.await_args.args[0]
+        self.assertEqual(payload["interactive"]["type"], "button")
+        self.assertEqual(len(payload["interactive"]["action"]["buttons"]), 3)
         self.assertTrue(
             all(
                 len(button["reply"]["title"]) <= 20
-                for payload in payloads
                 for button in payload["interactive"]["action"]["buttons"]
             )
         )
-        self.assertNotIn("Ver opções", str(payloads))
 
     def test_compacts_button_titles_to_whatsapp_limit(self) -> None:
         compacted = compact_button_title("Consulta odontológica")
