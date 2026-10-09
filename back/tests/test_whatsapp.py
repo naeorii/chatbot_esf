@@ -7,6 +7,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
@@ -21,9 +22,11 @@ from app.appointment_store import (
 )
 from app.main import app
 from app.whatsapp import (
+    compact_button_title,
     compact_title,
     parse_incoming_messages,
     process_webhook_payload,
+    send_options,
     verify_webhook_signature,
 )
 from app.whatsapp_store import claim_message, get_session, save_session
@@ -177,6 +180,35 @@ class WhatsAppIntegrationTests(unittest.TestCase):
 
         self.assertLessEqual(len(title), 24)
         self.assertTrue(title.endswith("…"))
+
+    def test_sends_large_menus_as_inline_button_groups(self) -> None:
+        options = [
+            SimpleNamespace(id=f"opcao-{index}", label=f"Opção de atendimento {index}")
+            for index in range(1, 6)
+        ]
+
+        with patch("app.whatsapp.graph_request", new_callable=AsyncMock) as graph_request:
+            asyncio.run(send_options("5551999999999", "Escolha uma opção:", options))
+
+        self.assertEqual(graph_request.await_count, 2)
+        payloads = [call.args[0] for call in graph_request.await_args_list]
+        self.assertEqual(payloads[0]["interactive"]["body"]["text"], "Escolha uma opção:")
+        self.assertEqual(payloads[1]["interactive"]["body"]["text"], "Mais opções:")
+        self.assertTrue(all(payload["interactive"]["type"] == "button" for payload in payloads))
+        self.assertTrue(
+            all(
+                len(button["reply"]["title"]) <= 20
+                for payload in payloads
+                for button in payload["interactive"]["action"]["buttons"]
+            )
+        )
+        self.assertNotIn("Ver opções", str(payloads))
+
+    def test_compacts_button_titles_to_whatsapp_limit(self) -> None:
+        compacted = compact_button_title("Consulta odontológica")
+
+        self.assertTrue(compacted.endswith("…"))
+        self.assertLessEqual(len(compacted), 20)
 
 
 def webhook_payload(message: dict) -> dict:

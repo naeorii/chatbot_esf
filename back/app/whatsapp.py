@@ -174,47 +174,42 @@ async def send_flow_result(recipient: str, result: FlowResult) -> None:
 
 async def send_options(recipient: str, body: str, options: Iterable[FlowOption]) -> None:
     option_list = list(options)
-    if len(option_list) <= 3 and all(len(option.label) <= 20 for option in option_list):
+    if not option_list:
+        await send_text(recipient, body)
+        return
+
+    # O WhatsApp permite no máximo três botões de resposta por mensagem.
+    # Dividimos menus maiores em blocos para manter todas as opções visíveis
+    # diretamente na conversa, sem abrir o antigo pop-up "Ver opções".
+    for start_index in range(0, len(option_list), 3):
+        option_group = option_list[start_index : start_index + 3]
+        group_body = body if start_index == 0 else "Mais opções:"
         interactive = {
             "type": "button",
-            "body": {"text": body[:1024]},
+            "body": {"text": group_body[:1024]},
             "action": {
                 "buttons": [
                     {
                         "type": "reply",
-                        "reply": {"id": option.id, "title": option.label},
+                        "reply": {
+                            "id": option.id,
+                            "title": compact_button_title(option.label),
+                        },
                     }
-                    for option in option_list
+                    for option in option_group
                 ]
             },
         }
-    else:
-        interactive = {
-            "type": "list",
-            "body": {"text": body[:1024]},
-            "action": {
-                "button": "Ver opções",
-                "sections": [
-                    {
-                        "title": "Atendimento",
-                        "rows": [
-                            {"id": option.id, "title": compact_title(option.label)}
-                            for option in option_list[:10]
-                        ],
-                    }
-                ],
-            },
-        }
 
-    await graph_request(
-        {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": recipient,
-            "type": "interactive",
-            "interactive": interactive,
-        }
-    )
+        await graph_request(
+            {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": recipient,
+                "type": "interactive",
+                "interactive": interactive,
+            }
+        )
 
 
 async def send_text(recipient: str, text: str) -> None:
@@ -299,3 +294,7 @@ def public_url(path: str) -> Optional[str]:
 
 def compact_title(title: str) -> str:
     return title if len(title) <= 24 else f"{title[:23]}…"
+
+
+def compact_button_title(title: str) -> str:
+    return title if len(title) <= 20 else f"{title[:19]}…"
