@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional
 import httpx
 
 from app.appointment_store import AppointmentCreate, save_appointment
-from app.chat_flow import START_NODE, FlowOption, FlowResult, handle_chat
+from app.chat_flow import FlowOption, FlowResult, handle_chat
 from app.whatsapp_store import claim_message, get_session, release_message, save_session
 
 
@@ -153,12 +153,7 @@ def persist_appointment(result: FlowResult, current_node: Optional[str]) -> Flow
 async def send_flow_result(recipient: str, result: FlowResult) -> None:
     body = "\n\n".join(result.messages)
     if result.options:
-        await send_options(
-            recipient,
-            body,
-            result.options,
-            use_buttons=result.current_node == START_NODE,
-        )
+        await send_options(recipient, body, result.options)
     elif body:
         await send_text(recipient, body)
 
@@ -181,14 +176,13 @@ async def send_options(
     recipient: str,
     body: str,
     options: Iterable[FlowOption],
-    use_buttons: bool = False,
 ) -> None:
     option_list = list(options)
     if not option_list:
         await send_text(recipient, body)
         return
 
-    if use_buttons:
+    if len(option_list) <= 3:
         interactive = {
             "type": "button",
             "body": {"text": body[:1024]},

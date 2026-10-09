@@ -196,7 +196,7 @@ class WhatsAppIntegrationTests(unittest.TestCase):
         self.assertEqual(payload["interactive"]["action"]["button"], "Ver opções")
         self.assertEqual(len(payload["interactive"]["action"]["sections"][0]["rows"]), 5)
 
-    def test_sends_main_menu_as_inline_buttons(self) -> None:
+    def test_sends_up_to_three_options_as_inline_buttons(self) -> None:
         options = [
             SimpleNamespace(id="informacoes", label="Informações"),
             SimpleNamespace(id="horario", label="Horário de funcionamento"),
@@ -204,14 +204,7 @@ class WhatsAppIntegrationTests(unittest.TestCase):
         ]
 
         with patch("app.whatsapp.graph_request", new_callable=AsyncMock) as graph_request:
-            asyncio.run(
-                send_options(
-                    "5551999999999",
-                    "Escolha uma opção:",
-                    options,
-                    use_buttons=True,
-                )
-            )
+            asyncio.run(send_options("5551999999999", "Escolha uma opção:", options))
 
         graph_request.assert_awaited_once()
         payload = graph_request.await_args.args[0]
