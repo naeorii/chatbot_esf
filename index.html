@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ESF Assistente: informações e agendamento da sua unidade de saúde</title>
+<meta name="description" content="Chatbot da Estratégia Saúde da Família: tire dúvidas sobre a unidade e peça seu atendimento médico, odontológico ou de enfermagem pelo WhatsApp.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F8F7; --surface:#FFFFFF; --ink:#12302B; --muted:#4A625D; --line:#D5E1DE;
+  --brand:#0E6B58; --brand-ink:#FFFFFF; --soft:#E3F0EC; --accent:#F2B705;
+  --bubble-in:#FFFFFF; --bubble-out:#D9F2E6; --chat-bg:#E9EFEC;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1A18; --surface:#142522; --ink:#E6F1EE; --muted:#9DB5AF; --line:#27403B;
+    --brand:#3CC3A3; --brand-ink:#08201B; --soft:#18332E;
+    --bubble-in:#1C3430; --bubble-out:#14503F; --chat-bg:#0F1F1C;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1A18; --surface:#142522; --ink:#E6F1EE; --muted:#9DB5AF; --line:#27403B;
+  --brand:#3CC3A3; --brand-ink:#08201B; --soft:#18332E;
+  --bubble-in:#1C3430; --bubble-out:#14503F; --chat-bg:#0F1F1C;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1.0625rem/1.6 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque","Public Sans",system-ui,sans-serif;line-height:1.1;margin:0;letter-spacing:-.02em}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+section{padding:88px 0}
+h2{font-size:clamp(1.9rem,4vw,2.7rem);font-weight:700;max-width:18ch}
+.lead{color:var(--muted);max-width:60ch;margin:16px 0 0}
+
+/* topo */
+header{border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{font:700 1.15rem "Bricolage Grotesque",sans-serif;text-decoration:none;display:flex;align-items:center;gap:10px}
+.logo i{width:14px;height:14px;background:var(--accent);border-radius:50% 50% 50% 0;display:block}
+nav{display:flex;gap:22px;font-size:.95rem}
+nav a{text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--ink)}
+@media(max-width:700px){nav{display:none}}
+
+/* botões */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 24px;border-radius:999px;font-weight:600;text-decoration:none;border:2px solid var(--brand);background:var(--brand);color:var(--brand-ink)}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+
+/* hero */
+.hero{padding:72px 0 88px}
+.hero .wrap{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
+h1{font-size:clamp(2.4rem,6vw,4rem);font-weight:700}
+.hero p{color:var(--muted);max-width:48ch;margin:20px 0 0;font-size:1.15rem}
+.note{font-size:.9rem;color:var(--muted);margin-top:18px}
+@media(max-width:860px){.hero .wrap{grid-template-columns:1fr}}
+
+/* celular com conversa */
+.phone{background:var(--surface);border:1px solid var(--line);border-radius:32px;padding:12px;max-width:380px;width:100%;justify-self:center;box-shadow:0 24px 60px -30px rgba(14,60,50,.45)}
+.phone-top{display:flex;align-items:center;gap:10px;padding:10px 12px 14px}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font:700 .85rem "Bricolage Grotesque",sans-serif}
+.phone-top b{display:block;font-size:.95rem;line-height:1.2}
+.phone-top span{font-size:.78rem;color:var(--muted)}
+.chat{background:var(--chat-bg);border-radius:20px;padding:14px;height:410px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:8px}
+.msg{max-width:84%;padding:9px 13px;border-radius:16px;font-size:.93rem;line-height:1.4}
+.msg.bot{background:var(--bubble-in);border-bottom-left-radius:4px;align-self:flex-start}
+.msg.me{background:var(--bubble-out);border-bottom-right-radius:4px;align-self:flex-end}
+.opts{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;max-width:90%}
+.opts span{border:1.5px solid var(--brand);color:var(--brand);border-radius:999px;padding:4px 12px;font-size:.85rem;font-weight:500;background:var(--surface)}
+.typing{align-self:flex-start;display:flex;gap:4px;padding:12px 14px;background:var(--bubble-in);border-radius:16px;border-bottom-left-radius:4px}
+.typing b{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+.typing b:nth-child(2){animation-delay:.15s}.typing b:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,80%,100%{opacity:.3}40%{opacity:1}}
+.in{animation:pop .3s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* informações */
+.alt{background:var(--surface);border-block:1px solid var(--line)}
+.topics{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:44px;border-top:1px solid var(--line)}
+.topics div{padding:22px 24px 22px 0;border-bottom:1px solid var(--line)}
+.topics h3{font-size:1.25rem}
+.topics p{margin:6px 0 0;color:var(--muted);font-size:.97rem}
+@media(max-width:800px){.topics{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.topics{grid-template-columns:1fr}}
+
+/* passos */
+.steps{list-style:none;margin:48px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding-top:56px}
+.steps li::before{content:counter(s);position:absolute;top:0;left:0;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#12302B;display:grid;place-items:center;font:700 1.1rem "Bricolage Grotesque",sans-serif}
+.steps li::after{content:"";position:absolute;top:19px;left:52px;right:-8px;height:2px;background:var(--line)}
+.steps li:last-child::after{display:none}
+.steps h3{font-size:1.2rem}
+.steps p{margin:6px 0 0;color:var(--muted);font-size:.96rem}
+@media(max-width:800px){.steps{grid-template-columns:1fr 1fr;row-gap:36px}.steps li::after{display:none}}
+@media(max-width:480px){.steps{grid-template-columns:1fr}}
+
+/* equipe */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+@media(max-width:860px){.split{grid-template-columns:1fr}}
+.status{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.pill{padding:6px 16px;border-radius:999px;font-weight:600;font-size:.9rem;border:1.5px solid var(--line);background:var(--surface)}
+.pill::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;background:currentColor}
+.p-novo{color:#2563B8}.p-conf{color:#0E8A5F}.p-canc{color:#B4432F}.p-at{color:#6B5BB5}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .p-novo{color:#7FB0F5}:root:not([data-theme="light"]) .p-conf{color:#4FD69F}:root:not([data-theme="light"]) .p-canc{color:#F08E7B}:root:not([data-theme="light"]) .p-at{color:#B3A6F0}}
+.pill{color:inherit}
+.tech{display:grid;grid-template-columns:auto 1fr;gap:10px 20px;margin:0;font-size:.97rem}
+.tech dt{font-weight:600}
+.tech dd{margin:0;color:var(--muted)}
+
+/* sobre */
+.about{background:var(--brand);color:var(--brand-ink)}
+.about h2{max-width:22ch}
+.about .lead{color:inherit;opacity:.88}
+.people{display:flex;flex-wrap:wrap;gap:10px 28px;margin:28px 0 0;padding:0;list-style:none;font-size:.97rem}
+.people small{display:block;opacity:.8;font-size:.82rem}
+.about .btn{background:var(--accent);border-color:var(--accent);color:#12302B}
+
+footer{padding:36px 0;color:var(--muted);font-size:.88rem}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.in,.typing b{animation:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <a class="logo" href="#topo"><i aria-hidden="true"></i>ESF Assistente</a>
+    <nav aria-label="Seções">
+      <a href="#informacoes">Informações</a>
+      <a href="#agendamento">Agendamento</a>
+      <a href="#equipe">Para a equipe</a>
+      <a href="#projeto">Sobre a ESF</a>
+    </nav>
+  </div>
+</header>
+
+<main id="topo">
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1>A ESF São Carlos/Urlândia mais perto de você.</h1>
+      <p>Tire dúvidas sobre a ESF e peça seu atendimento médico, odontológico ou de enfermagem numa conversa simples, sem fila e sem deslocamento.</p>
+      <div class="ctas">
+        <a class="btn" id="cta-wa" href="https://wa.me/555591485641?text=Ol%C3%A1%21%20Quero%20conhecer%20o%20assistente%20da%20ESF." target="_blank" rel="noopener">Conversar no WhatsApp</a>
+        <a class="btn ghost" href="#agendamento">Ver como agendar</a>
+      </div>
+      <p class="note">Canal digital da ESF São Carlos/Urlândia para facilitar o acesso da comunidade a informações e agendamentos.</p>
+    </div>
+
+    <div class="phone" aria-label="Exemplo de conversa com o assistente">
+      <div class="phone-top">
+        <div class="avatar" aria-hidden="true">ESF</div>
+        <div><b>ESF Assistente</b><span>Unidade de Saúde da Família</span></div>
+      </div>
+      <div class="chat" id="chat" role="log" aria-live="off"></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt" id="informacoes">
+  <div class="wrap">
+    <h2>Respostas sobre a unidade, a qualquer hora</h2>
+    <p class="lead">Escolha o assunto no menu da conversa. Cada resposta já vem pronta, escrita pela equipe da unidade.</p>
+    <div class="topics">
+      <div><h3>Funcionamento</h3><p>Dias e horários de atendimento da unidade.</p></div>
+      <div><h3>Serviços</h3><p>O que a ESF oferece e como cada serviço funciona.</p></div>
+      <div><h3>Equipe</h3><p>Quem são os profissionais que cuidam do seu território.</p></div>
+      <div><h3>Localização</h3><p>Endereço e como chegar, com mapa.</p></div>
+      <div><h3>Exames</h3><p>Orientações sobre coleta e preparo.</p></div>
+      <div><h3>Medicamentos</h3><p>Informações sobre retirada e dispensação.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="agendamento">
+  <div class="wrap">
+    <h2>Agende em quatro passos</h2>
+    <p class="lead">O assistente conduz a conversa do começo ao fim. Você só responde ao que for perguntado.</p>
+    <ol class="steps">
+      <li><h3>Escolha o serviço</h3><p>Consulta médica, odontológica ou de enfermagem.</p></li>
+      <li><h3>Identifique-se</h3><p>Informe os dados pedidos para registrar o atendimento.</p></li>
+      <li><h3>Selecione o horário</h3><p>Só aparecem horários livres, então ninguém marca em cima do outro.</p></li>
+      <li><h3>Confirme</h3><p>Revise as informações e finalize. A solicitação segue para a equipe.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="alt" id="equipe">
+  <div class="wrap split">
+    <div>
+      <h2>Uma agenda organizada para quem atende</h2>
+      <p class="lead">As solicitações ficam registradas em um banco de dados online. Os profissionais acompanham cada pedido e atualizam o andamento.</p>
+      <div class="status" role="list" aria-label="Status do agendamento">
+        <span class="pill p-novo" role="listitem">Novo</span>
+        <span class="pill p-conf" role="listitem">Confirmado</span>
+        <span class="pill p-canc" role="listitem">Cancelado</span>
+        <span class="pill p-at" role="listitem">Atendido</span>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-size:1.3rem;margin-bottom:18px">Como foi construído</h3>
+      <dl class="tech">
+        <dt>Interface</dt><dd>React 19 e TypeScript, com mapa em Leaflet.</dd>
+        <dt>API</dt><dd>FastAPI (REST): processa as mensagens, aplica as regras e consulta a agenda.</dd>
+        <dt>Dados</dt><dd>Banco online com serviços, equipe e ocupação de horários.</dd>
+        <dt>Conversa</dt><dd>Fluxos pré-definidos, simples e previsíveis.</dd>
+        <dt>Canal</dt><dd>Web e integração com WhatsApp.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<section class="about" id="projeto">
+  <div class="wrap">
+    <h2>Informação e cuidado mais perto da comunidade</h2>
+    <p class="lead">O assistente da ESF São Carlos/Urlândia reúne orientações sobre a unidade e facilita solicitações de agendamento em um canal simples e acessível. Assim, a comunidade encontra respostas com mais rapidez e a equipe mantém as demandas organizadas.</p>
+    <div class="ctas"><a class="btn" href="https://wa.me/555591485641?text=Ol%C3%A1%21%20Quero%20conhecer%20o%20assistente%20da%20ESF." target="_blank" rel="noopener">Experimentar no WhatsApp</a></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>ESF Assistente · ESF São Carlos/Urlândia · Santa Maria/RS</span>
+    <span>O assistente não substitui atendimento clínico. Em urgências, procure um serviço de emergência ou ligue 192.</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var chat=document.getElementById('chat');
+  var script=[
+    {t:'bot',x:'Olá! Sou o assistente da sua unidade de saúde. Como posso ajudar?'},
+    {t:'opts',x:['Informações','Agendar atendimento']},
+    {t:'me',x:'Agendar atendimento'},
+    {t:'bot',x:'Qual serviço você precisa?'},
+    {t:'opts',x:['Médico','Odontológico','Enfermagem']},
+    {t:'me',x:'Odontológico'},
+    {t:'bot',x:'Esses são os horários livres. Qual prefere?'},
+    {t:'opts',x:['Ter 14:00','Qua 09:30','Qui 15:00']},
+    {t:'me',x:'Qua 09:30'},
+    {t:'bot',x:'Pedido enviado para a equipe. Você recebe a confirmação por aqui.'}
+  ];
+  function el(item){
+    var d=document.createElement('div');
+    if(item.t==='opts'){
+      d.className='opts in';
+      item.x.forEach(function(o){var s=document.createElement('span');s.textContent=o;d.appendChild(s)});
+    }else{
+      d.className='msg '+item.t+' in';
+      d.textContent=item.x;
+    }
+    return d;
+  }
+  function trim(){while(chat.scrollHeight>chat.clientHeight+2&&chat.children.length>1){chat.removeChild(chat.firstChild)}}
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){
+    script.slice(-5).forEach(function(i){chat.appendChild(el(i))});
+    return;
+  }
+  var i=0;
+  function next(){
+    if(i>=script.length){setTimeout(function(){chat.innerHTML='';i=0;next()},4500);return}
+    var item=script[i++];
+    if(item.t==='bot'){
+      var ty=document.createElement('div');ty.className='typing in';ty.innerHTML='<b></b><b></b><b></b>';
+      chat.appendChild(ty);trim();
+      setTimeout(function(){chat.removeChild(ty);chat.appendChild(el(item));trim();setTimeout(next,500)},900);
+    }else{
+      chat.appendChild(el(item));trim();
+      setTimeout(next,item.t==='opts'?1100:700);
+    }
+  }
+  next();
+})();
+</script>
+</body>
+</html>
