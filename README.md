@@ -1,7 +1,7 @@
 # ESF Assistente Chatbot
 
 Um chatbot inteligente para assistência ESF (Estratégia Saúde da Família), desenvolvido com backend em FastAPI e frontend em React.
-
+Landing page do projeto: https://saocarlos.gripi.ufsm.br/
 ## 📋 Estrutura do Projeto
 
 ```
